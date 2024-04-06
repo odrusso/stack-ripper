@@ -1,0 +1,24 @@
+[alias]
+esp32c3 = "run --release --features=esp32c3 --target=riscv32imc-unknown-none-elf"
+
+
+[target.'cfg(target_arch = "riscv32")']
+runner    = "espflash flash --monitor"
+rustflags = [
+  "-C", "link-arg=-Tlinkall.x",
+  "-C", "force-frame-pointers",
+  "-C", "link-arg=-Trom_functions.x"
+]
+
+
+[build]
+target = "riscv32imc-unknown-none-elf"
+
+
+[env]
+ESP_LOGLEVEL = "info"
+DEFMT_LOG = "trace"
+
+
+[unstable]
+build-std = ["alloc", "core"]
