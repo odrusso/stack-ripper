@@ -39,9 +39,10 @@ postcard            = "1.0.8"
 
 [profile.release]  
 codegen-units    = 1
-debug            = 2
+debug            = 0
 debug-assertions = false
 incremental      = false
 opt-level        = 3
-lto = 'fat'
+lto              = 'fat'
 overflow-checks  = false
+panic            ='abort'
