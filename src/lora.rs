@@ -3,18 +3,24 @@ use defmt::info;
 use embassy_executor::task;
 use embassy_time::Delay;
 use embedded_hal_bus::spi::ExclusiveDevice;
-use esp_hal::dma::{Channel0, ChannelCreator0, DmaPriority};
-use esp_hal::dma_buffers;
-use esp_hal::gpio::{AnyPin, Input, Output, PullUp, PushPull};
-use esp_hal::peripherals::SPI2;
-use esp_hal::spi::master::dma::{SpiDma, WithDmaSpi2};
-use esp_hal::spi::master::Spi;
-use esp_hal::spi::FullDuplexMode;
+use esp_hal::{
+    dma::{ChannelCreator0, DmaPriority},
+    dma_buffers,
+    gpio::{AnyPin, Input, Output, PullUp, PushPull},
+    peripherals::SPI2,
+    spi::{
+        master::{dma::WithDmaSpi2, Spi},
+        FullDuplexMode,
+    },
+};
 use heapless::Vec;
-use lora_phy::iv::GenericSx127xInterfaceVariant;
-use lora_phy::mod_params::{Bandwidth, CodingRate, ModulationParams, RadioError, SpreadingFactor};
-use lora_phy::sx127x::Sx127x;
-use lora_phy::{sx127x, LoRa, RxMode};
+use lora_phy::{
+    iv::GenericSx127xInterfaceVariant,
+    mod_params::{Bandwidth, CodingRate, ModulationParams, SpreadingFactor},
+    mod_traits::RadioKind,
+    sx127x::{self, Sx127x},
+    DelayNs, LoRa, RxMode,
+};
 use postcard::{from_bytes, to_vec};
 
 static LORA_FREQUENCY_IN_HZ: u32 = 433_000_000;
@@ -53,14 +59,7 @@ pub async fn receive(
         .await
         .unwrap();
 
-    let modulation_parameters = {
-        match create_lora_modulation_parameters(&mut lora) {
-            Ok(mp) => mp,
-            Err(err) => {
-                panic!("Modulation Parameter Error: {:?}", err);
-            }
-        }
-    };
+    let modulation_parameters = create_lora_modulation_parameters(&mut lora);
 
     let rx_packet_parameters = {
         match lora.create_rx_packet_params(
@@ -146,14 +145,7 @@ pub async fn transmit(
         .await
         .unwrap();
 
-    let modulation_parameters = {
-        match create_lora_modulation_parameters(&mut lora) {
-            Ok(mp) => mp,
-            Err(err) => {
-                panic!("Modulation Param Setup: {:?}", err);
-            }
-        }
-    };
+    let modulation_parameters = create_lora_modulation_parameters(&mut lora);
 
     let mut tx_packet_parameters = {
         match lora.create_tx_packet_params(16, false, true, false, &modulation_parameters) {
@@ -200,23 +192,20 @@ pub async fn transmit(
     }
 }
 
-fn create_lora_modulation_parameters(
-    lora: &mut LoRa<
-        Sx127x<
-            ExclusiveDevice<
-                SpiDma<SPI2, Channel0, FullDuplexMode>,
-                AnyPin<Output<PushPull>>,
-                Delay,
-            >,
-            GenericSx127xInterfaceVariant<AnyPin<Output<PushPull>>, AnyPin<Input<PullUp>>>,
-        >,
-        Delay,
-    >,
-) -> Result<ModulationParams, RadioError> {
-    lora.create_modulation_params(
+fn create_lora_modulation_parameters<T: RadioKind, U: DelayNs>(
+    lora: &mut LoRa<T, U>,
+) -> ModulationParams {
+    let params = lora.create_modulation_params(
         SpreadingFactor::_10,
         Bandwidth::_15KHz,
         CodingRate::_4_8,
         LORA_FREQUENCY_IN_HZ,
-    )
+    );
+
+    match params {
+        Ok(mp) => return mp,
+        Err(err) => {
+            panic!("Modulation Param Setup: {:?}", err);
+        }
+    }
 }
