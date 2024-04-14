@@ -1,4 +1,3 @@
-use crate::{State, STATE};
 use defmt::info;
 use embassy_executor::task;
 use embassy_time::Delay;
@@ -13,7 +12,6 @@ use esp_hal::{
         FullDuplexMode,
     },
 };
-use heapless::Vec;
 use lora_phy::{
     iv::GenericSx127xInterfaceVariant,
     mod_params::{Bandwidth, CodingRate, ModulationParams, SpreadingFactor},
@@ -21,9 +19,12 @@ use lora_phy::{
     sx127x::{self, Sx127x},
     DelayNs, LoRa, RxMode,
 };
-use postcard::{from_bytes, to_vec};
+use postcard::{from_bytes, to_slice};
 
-static LORA_FREQUENCY_IN_HZ: u32 = 433_000_000;
+use crate::{State, STATE};
+
+const LORA_FREQUENCY_IN_HZ: u32 = 433_000_000;
+const LORA_MAX_PACKET_SIZE_BYTES: usize = 255;
 
 #[task]
 pub async fn receive(
@@ -78,7 +79,8 @@ pub async fn receive(
     };
 
     loop {
-        let mut rx_buff = [0u8; 255];
+        // TODO: Can we move this out of the loop?
+        let mut rx_buff = [0u8; LORA_MAX_PACKET_SIZE_BYTES];
 
         match lora
             .prepare_for_rx(
@@ -157,38 +159,21 @@ pub async fn transmit(
     };
 
     loop {
-        info!("TX START");
+        // TODO: Can we move setting up this beff to outside the loop?
+        let mut buff = [0u8; LORA_MAX_PACKET_SIZE_BYTES];
+        let output = to_slice(&*STATE.lock().await, &mut buff).unwrap();
+        
+        lora.prepare_for_tx(
+            &modulation_parameters,
+            &mut tx_packet_parameters,
+            20,
+            &output,
+        )
+        .await
+        .unwrap_or(());
 
-        let output: Vec<u8, 128> = to_vec(&*STATE.lock().await).unwrap();
-        let mut buff = [0u8; 255];
-        buff[..output.len()].clone_from_slice(&output);
-
-        match lora
-            .prepare_for_tx(
-                &modulation_parameters,
-                &mut tx_packet_parameters,
-                20,
-                &buff[0..output.len()],
-            )
-            .await
-        {
-            Ok(()) => {}
-            Err(err) => {
-                panic!("Prepare TX error: {:?}", err);
-            }
-        };
-
-        match lora.tx().await {
-            Ok(()) => {
-                info!("TX DONE");
-            }
-            Err(err) => {
-                panic!("Actual TX error: {:?}", err);
-            }
-        };
-
-        // info!("Waiting 5 seconds before transmitting");
-        // Timer::after_millis(5_000).await;
+        // There's not much we can do if this fails
+        lora.tx().await.unwrap_or(());
     }
 }
 
