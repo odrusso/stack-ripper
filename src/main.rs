@@ -2,8 +2,8 @@
 #![no_main]
 #![no_std]
 
+
 use embassy_executor::{task, Spawner};
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use embassy_time::Timer;
 
 use esp_hal::{
@@ -19,35 +19,18 @@ use esp_hal::{
     Uart, IO,
 };
 
-use defmt::{info, Format};
+use defmt::info;
 use esp_backtrace as _;
-
-use serde::{Deserialize, Serialize};
 
 mod alt;
 mod gps;
 mod lora;
-
-// Define and setup the system state
-#[derive(Debug, Format, Serialize, Deserialize)]
-struct State {
-    longitude: f32,
-    latitude: f32,
-    gps_altitude: f32,
-    altimeter_altitude: f32,
-}
-
-static STATE: Mutex<CriticalSectionRawMutex, State> = Mutex::new(State {
-    longitude: 0.0,
-    latitude: 0.0,
-    gps_altitude: 0.0,
-    altimeter_altitude: 0.0,
-});
+mod state;
 
 #[task]
 async fn print_state() -> ! {
     loop {
-        info!("{:?}", *STATE.lock().await);
+        info!("{:?}", *state::STATE.lock().await);
         Timer::after_millis(5_000).await;
     }
 }
@@ -69,10 +52,11 @@ async fn main(_spawner: Spawner) -> () {
     let uart_pins = Some(TxRxPins::new_tx_rx(io.pins.gpio21, io.pins.gpio20));
     let uart_config = Config::default().baudrate(9200);
     let uart = Uart::new_with_config(peripherals.UART0, uart_config, uart_pins, &clocks);
+
     let (_, rx) = uart.split();
 
     // Note that this task now owns the UART RX line completely
-    _spawner.spawn(gps::sample(rx)).unwrap();
+    // _spawner.spawn(gps::sample(rx)).unwrap();
 
     // Setup I2C for barometer
     let bmp_i2c_clock = io.pins.gpio8;
@@ -86,7 +70,7 @@ async fn main(_spawner: Spawner) -> () {
     );
 
     // Note that this task now owns the I2C bus completely
-    _spawner.spawn(alt::sample(i2c)).ok();
+    // _spawner.spawn(alt::sample(i2c)).ok();
 
     // Set SPI for LoRa
     let lora_spi_clock = io.pins.gpio0;
@@ -106,7 +90,7 @@ async fn main(_spawner: Spawner) -> () {
     let dma_channel = dma.channel0;
 
     _spawner
-        .spawn(lora::transmit(
+        .spawn(lora::receive(
             spi,
             lora_irq.into(),
             lora_rst.into(),

@@ -1,10 +1,10 @@
-use defmt::info;
+use defmt::warn;
 use embassy_executor::task;
 use embedded_io_async::Read;
 use esp_hal::{peripherals::UART0, UartRx};
 use nmea0183::{ParseResult, Parser, Sentence};
 
-use crate::STATE;
+use crate::state::STATE;
 
 #[task]
 pub async fn sample(mut rx: UartRx<'static, UART0>) -> ! {
@@ -17,27 +17,36 @@ pub async fn sample(mut rx: UartRx<'static, UART0>) -> ! {
 
     loop {
         // Read the exact amount of words for a NEMA sentence
-        let recieved_bytes = Read::read_exact(&mut rx, &mut read_buffer).await;
-        match recieved_bytes {
-            Ok(_) => {
-                for result in parser.parse_from_bytes(&read_buffer) {
-                    match result {
-                        Ok(ParseResult::GGA(Some(result))) => {
-                            let mut state = STATE.lock().await;
-                            state.latitude = result.latitude.as_f64() as f32;
-                            state.longitude = result.longitude.as_f64() as f32;
-                            state.gps_altitude = result.altitude.meters;
-                        }
-                        Ok(_) => {
-                            /* Other results parsed. This shouldn't happen because of the filter */
-                        }
-                        Err(e) => {
-                            info!("NMEA Parse Error: {:?}", e)
-                        }
+        Read::read_exact(&mut rx, &mut read_buffer).await.unwrap();
+
+        for result in parser.parse_from_bytes(&read_buffer) {
+            match result {
+                Ok(ParseResult::GGA(Some(result))) => {
+                    let mut state = STATE.lock().await;
+                    state.lt = Some(result.latitude.as_f64() as f32);
+                    state.ln = Some(result.longitude.as_f64() as f32);
+                    state.ga = Some(result.altitude.meters);
+                }
+                Ok(_) => {
+                    /* Other results parsed. This shouldn't happen because of the filter */
+                    // info!("Some other result recieved from GPS")
+                }
+                Err(e) => {
+                    warn!("NMEA Parse Error: {:?}", e);
+
+                    // I assume we've missed a byte somehow?
+                    // Keep reading bytes, 1 at a time, until we hit CRLF
+
+                    let mut eol_buff: [u8; 1] = [0u8; 1];
+                    while eol_buff[0] != b'\n' {
+                        Read::read_exact(&mut rx, &mut eol_buff).await.unwrap();
                     }
+                    
+                    // The very last byte we consumed was a LF
+                    // Presumably - the byte before that was a CR
+                    // Now whatever is next should be the start of another NMEA message
                 }
             }
-            Err(e) => info!("RX Error: {:?}", e),
         }
     }
 }

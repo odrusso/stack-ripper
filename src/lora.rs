@@ -1,6 +1,6 @@
 use defmt::info;
 use embassy_executor::task;
-use embassy_time::Delay;
+use embassy_time::{Delay, Timer};
 use embedded_hal_bus::spi::ExclusiveDevice;
 use esp_hal::{
     dma::{ChannelCreator0, DmaPriority},
@@ -21,7 +21,7 @@ use lora_phy::{
 };
 use postcard::{from_bytes, to_slice};
 
-use crate::{State, STATE};
+use crate::state::{State, STATE};
 
 const LORA_FREQUENCY_IN_HZ: u32 = 433_000_000;
 const LORA_MAX_PACKET_SIZE_BYTES: usize = 255;
@@ -162,7 +162,8 @@ pub async fn transmit(
         // TODO: Can we move setting up this beff to outside the loop?
         let mut buff = [0u8; LORA_MAX_PACKET_SIZE_BYTES];
         let output = to_slice(&*STATE.lock().await, &mut buff).unwrap();
-        
+
+        info!("Transmitting {:?} bytes over LoRA", output.len());        
         lora.prepare_for_tx(
             &modulation_parameters,
             &mut tx_packet_parameters,
@@ -174,6 +175,12 @@ pub async fn transmit(
 
         // There's not much we can do if this fails
         lora.tx().await.unwrap_or(());
+
+        info!("LoRA complete");
+
+        // Only transmit once every 10 seconds
+        // Maybe this should be longer...?
+        Timer::after_millis(10_000).await;
     }
 }
 
