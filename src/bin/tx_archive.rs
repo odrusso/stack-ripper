@@ -22,10 +22,7 @@ use esp_hal::{
 use defmt::info;
 use esp_backtrace as _;
 
-mod alt;
-mod gps;
-mod lora;
-mod state;
+use stack_ripper::{alt, gps, lora, state};
 
 #[task]
 async fn print_state() -> ! {
@@ -56,7 +53,7 @@ async fn main(_spawner: Spawner) -> () {
     let (_, rx) = uart.split();
 
     // Note that this task now owns the UART RX line completely
-    // _spawner.spawn(gps::sample(rx)).unwrap();
+    _spawner.spawn(gps::sample_uart(rx)).unwrap();
 
     // Setup I2C for barometer
     let bmp_i2c_clock = io.pins.gpio8;
@@ -70,7 +67,7 @@ async fn main(_spawner: Spawner) -> () {
     );
 
     // Note that this task now owns the I2C bus completely
-    // _spawner.spawn(alt::sample(i2c)).ok();
+    _spawner.spawn(alt::sample(i2c)).ok();
 
     // Set SPI for LoRa
     let lora_spi_clock = io.pins.gpio0;
@@ -89,16 +86,16 @@ async fn main(_spawner: Spawner) -> () {
     let dma = Dma::new(peripherals.DMA);
     let dma_channel = dma.channel0;
 
-    _spawner
-        .spawn(lora::receive(
-            spi,
-            lora_irq.into(),
-            lora_rst.into(),
-            lora_spi_csb.into(),
-            dma_channel,
-        ))
-        .ok();
+    // _spawner
+    //     .spawn(lora::transmit(
+    //         spi,
+    //         lora_irq.into(),
+    //         lora_rst.into(),
+    //         lora_spi_csb.into(),
+    //         dma_channel,
+    //     ))
+    //     .ok();
 
     // Finally set up the task to print state
-    // _spawner.spawn(print_state()).ok();
+    _spawner.spawn(print_state()).ok();
 }
