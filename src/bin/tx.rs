@@ -53,7 +53,8 @@ async fn main(_spawner: Spawner) -> () {
 
     let dma_descriptors = DMA_DESCRIPTORS.init(dma_descriptors!(32000));
 
-    let spi = Spi::new(peripherals.SPI2, 200_u32.kHz(), SpiMode::Mode0, &clocks)
+    // Max bitrate of the SX1278 is 300kbps vs. 2.2mbps for the NEO-M8. We have to pick the lower of the two.
+    let spi = Spi::new(peripherals.SPI2, 300_u32.kHz(), SpiMode::Mode0, &clocks)
         .with_sck(spi_clck_pin)
         .with_mosi(spi_mosi_pin)
         .with_miso(spi_miso_pin)
@@ -64,8 +65,7 @@ async fn main(_spawner: Spawner) -> () {
             DmaPriority::Priority0,
         ));
 
-    let spi_bus = Mutex::new(spi);
-    let spi_bus = SPI_BUS.init(spi_bus);
+    let spi_bus = SPI_BUS.init(Mutex::new(spi));
 
     // Setup GPS task
     let gps_csb_pin = io.pins.gpio21.into_push_pull_output();
