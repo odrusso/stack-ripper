@@ -2,11 +2,15 @@ use defmt::warn;
 use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
 use embassy_executor::task;
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
+use embassy_time::Timer;
 use embedded_io_async::Read;
 use esp_hal::{dma::Channel0, gpio::{AnyPin, Output, PushPull}, peripherals::{SPI2, UART0}, spi::{master::dma::SpiDma, FullDuplexMode}, UartRx};
 use nmea0183::{ParseResult, Parser, Sentence};
 
 use crate::state::STATE;
+
+// Apparently NMEA sentences are always 79 bytes long
+const NMEA_BUFFER_SIZE: usize = 79;
 
 #[task]
 pub async fn sample_uart(mut rx: UartRx<'static, UART0>) -> ! {
@@ -56,12 +60,11 @@ pub async fn sample_uart(mut rx: UartRx<'static, UART0>) -> ! {
 
 #[task]
 pub async fn sample_spi(mut spi: SpiDevice<'static, NoopRawMutex, SpiDma<'static, SPI2, Channel0, FullDuplexMode>, AnyPin<Output<PushPull>>>) -> ! {
-    // Apparently NMEA sentences are always 79 bytes long
-    const NMEA_BUFFER_SIZE: usize = 79;
     let mut read_buffer: [u8; NMEA_BUFFER_SIZE] = [0u8; NMEA_BUFFER_SIZE];
 
     // Apparently - the way to read from the NEO-M8 is to concurrently write 1s to the MOSI while reading from MISO
-    let write_buffer = [1u8; NMEA_BUFFER_SIZE];
+    // Unclear if this is what the module expects, maybe this should be all zeros?
+    let write_buffer = [0xFF; NMEA_BUFFER_SIZE];
 
     // We only GGA sentences parsed, which contains the main GPS info we need
     let mut parser = Parser::new().sentence_only(Sentence::GGA);
@@ -69,6 +72,11 @@ pub async fn sample_spi(mut spi: SpiDevice<'static, NoopRawMutex, SpiDma<'static
     loop {
         // Read the exact amount of words for a NEMA sentence
         embedded_hal_async::spi::SpiDevice::transfer(&mut spi, &mut read_buffer, &write_buffer).await.unwrap();
+
+        // If the read buffer is all 0xFF, (1s) then we should stop polling and wait for a bit.
+        if read_array_done(&read_buffer) {
+            Timer::after_millis(1_000).await;
+        }
 
         for result in parser.parse_from_bytes(&read_buffer) {
             match result {
@@ -88,4 +96,8 @@ pub async fn sample_spi(mut spi: SpiDevice<'static, NoopRawMutex, SpiDma<'static
             }
         }
     }
+}
+
+fn read_array_done(read: &[u8; NMEA_BUFFER_SIZE]) -> bool {
+    read.iter().all(|a| *a == 0xFF)
 }
