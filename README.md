@@ -23,7 +23,10 @@ The transmitter (`tx`) additionally includes:
 - a custom LiPo power regulation and monitoring
 
 The full avionics setup (`av`) additionally includes:
-- multiple n-MOSFET terminals for firing pyrotechnic charges.
+- a BMP280 altimeter,
+- an undiscolsed 9-DOF IMU,
+- multiple n-MOSFET terminals for firing pyrotechnic charges,
+- additional hardware lockouts preventing unwanted firings.
 
 ### Software 
 All written in async Rust, using [embassy](https://embassy.dev).
