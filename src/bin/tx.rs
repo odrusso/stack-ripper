@@ -69,7 +69,9 @@ async fn main(_spawner: Spawner) -> () {
 
     // Setup GPS task
     let gps_csb_pin = io.pins.gpio21.into_push_pull_output();
+
     let gps_spi_device = SpiDevice::new(spi_bus, gps_csb_pin.into());
+    
     _spawner.spawn(gps::sample_spi(gps_spi_device)).unwrap();
 
     // Setup LoRA Task

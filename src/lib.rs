@@ -6,3 +6,5 @@ pub mod alt;
 pub mod gps;
 pub mod lora;
 pub mod state;
+pub mod imu;
+

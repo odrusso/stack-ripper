@@ -24,7 +24,7 @@ The transmitter (`tx`) additionally includes:
 
 The full avionics setup (`av`) additionally includes:
 - a BMP280 altimeter,
-- an undiscolsed 9-DOF IMU,
+- a BMO055 IMU,
 - multiple n-MOSFET terminals for firing pyrotechnic charges,
 - additional hardware lockouts preventing unwanted firings.
 
@@ -34,7 +34,9 @@ All written in async Rust, using [embassy](https://embassy.dev).
 Each platform (`rx`, `tx`, and `av`) has a seperate binary, in `/src/bin/[platform].rs`.
 
 Each prehipheral is maintained in a resuable library in `/src/[prehipheral].rs`
-## Run Locally
+
+
+## Getting started
 
 Install the prerequisites
 

@@ -178,9 +178,14 @@ pub async fn transmit(
 fn create_lora_modulation_parameters<T: RadioKind, U: DelayNs>(
     lora: &mut LoRa<T, U>,
 ) -> ModulationParams {
+    // These settings result in roughly 977 bps
+    // The coding rate can be changed to 4/5 to get to 1.6kbps
+    // But this is about as reliable as we can get without seriosuly harming 
+    // bitrate, without having an external TCXO reference clock required
+    // for the lower bandwidths to be reliable.
     let params = lora.create_modulation_params(
-        SpreadingFactor::_10,
-        Bandwidth::_15KHz,
+        SpreadingFactor::_8,
+        Bandwidth::_62KHz,
         CodingRate::_4_8,
         LORA_FREQUENCY_IN_HZ,
     );
