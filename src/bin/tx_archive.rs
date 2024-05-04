@@ -3,7 +3,9 @@
 #![no_std]
 
 
+use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
 use embassy_executor::{task, Spawner};
+use embassy_sync::{blocking_mutex::raw::NoopRawMutex, mutex::Mutex};
 use embassy_time::Timer;
 
 use esp_hal::{
@@ -11,7 +13,7 @@ use esp_hal::{
     dma::Dma,
     embassy,
     i2c::I2C,
-    peripherals::Peripherals,
+    peripherals::{Peripherals, I2C0},
     prelude::*, 
     spi::{master::Spi, SpiMode},
     timer::TimerGroup,
@@ -22,7 +24,11 @@ use esp_hal::{
 use defmt::info;
 use esp_backtrace as _;
 
-use stack_ripper::{alt, gps, lora, state};
+use stack_ripper::{alt, gps, state};
+use static_cell::StaticCell;
+
+static I2C_BUS: StaticCell<Mutex<NoopRawMutex, I2C<I2C0>>> = StaticCell::new();
+
 
 #[task]
 async fn print_state() -> ! {
@@ -66,15 +72,18 @@ async fn main(_spawner: Spawner) -> () {
         &clocks,
     );
 
-    // Note that this task now owns the I2C bus completely
-    _spawner.spawn(alt::sample(i2c)).ok();
+    let i2c_bus = Mutex::new(i2c);
+    let i2c_bus = I2C_BUS.init(i2c_bus);
+    let i2c_alt = I2cDevice::new(i2c_bus);
+
+    _spawner.spawn(alt::sample(i2c_alt)).ok();
 
     // Set SPI for LoRa
     let lora_spi_clock = io.pins.gpio0;
     let lora_spi_miso = io.pins.gpio1;
     let lora_spi_mosi = io.pins.gpio2;
-    let lora_spi_csb = io.pins.gpio3.into_push_pull_output();
 
+    let lora_spi_csb = io.pins.gpio3.into_push_pull_output();
     let lora_rst = io.pins.gpio10.into_push_pull_output();
     let lora_irq = io.pins.gpio4.into_pull_up_input();
 

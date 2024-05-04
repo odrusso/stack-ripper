@@ -39,6 +39,7 @@ nb                  = "1.1.0"
 serde               = { version = "1.0.197", default-features = false }
 postcard            = "1.0.8"
 static_cell         = "2.1.0"
+bno055              = { git = "https://github.com/odrusso/bno055", version = "0.4.0"}
 
 [profile.release]  
 codegen-units    = 1
