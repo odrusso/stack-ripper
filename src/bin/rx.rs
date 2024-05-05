@@ -2,16 +2,15 @@
 #![no_main]
 #![no_std]
 
+use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
 use embassy_executor::{task, Spawner};
 use embassy_time::Timer;
 
 use esp_hal::{
     clock::{ClockControl, CpuClock},
-    dma::Dma,
     embassy,
     peripherals::Peripherals,
     prelude::*, 
-    spi::{master::Spi, SpiMode},
     timer::TimerGroup,
     IO,
 };
@@ -19,7 +18,7 @@ use esp_hal::{
 use defmt::info;
 use esp_backtrace as _;
 
-use stack_ripper::{state, lora};
+use stack_ripper::{lora, spi, state};
 
 #[task]
 async fn print_state() -> ! {
@@ -42,30 +41,31 @@ async fn main(_spawner: Spawner) -> () {
 
     info!("Initializing compete");
 
-    // Set SPI for LoRa
-    let lora_spi_clock = io.pins.gpio3;
-    let lora_spi_miso = io.pins.gpio2;
-    let lora_spi_mosi = io.pins.gpio1;
-    let lora_spi_csb = io.pins.gpio0.into_push_pull_output();
+    // Set SPI bus
+    let spi_clock = io.pins.gpio3;
+    let spi_mosi = io.pins.gpio1;
+    let spi_miso = io.pins.gpio2;
 
+    let spi_bus = spi::init(
+        peripherals.DMA, 
+        peripherals.SPI2,
+        &clocks, 
+        spi_clock.degrade(), 
+        spi_mosi.degrade(), 
+        spi_miso.degrade()
+    );
+
+    let lora_spi_csb = io.pins.gpio0.into_push_pull_output();
     let lora_rst = io.pins.gpio10.into_push_pull_output();
     let lora_irq = io.pins.gpio4.into_pull_up_input();
 
-    let spi = Spi::new(peripherals.SPI2, 200_u32.kHz(), SpiMode::Mode0, &clocks)
-        .with_sck(lora_spi_clock)
-        .with_mosi(lora_spi_mosi)
-        .with_miso(lora_spi_miso);
-
-    let dma = Dma::new(peripherals.DMA);
-    let dma_channel = dma.channel0;
+    let lora_spi = SpiDevice::new(spi_bus, lora_spi_csb.into());
 
     _spawner
         .spawn(lora::receive(
-            spi,
+            lora_spi,
             lora_irq.into(),
-            lora_rst.into(),
-            lora_spi_csb.into(),
-            dma_channel,
+            lora_rst.into()
         ))
         .ok();
 }

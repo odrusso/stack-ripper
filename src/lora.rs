@@ -3,14 +3,12 @@ use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
 use embassy_executor::task;
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
 use embassy_time::{Delay, Timer};
-use embedded_hal_bus::spi::ExclusiveDevice;
 use esp_hal::{
-    dma::{Channel0, ChannelCreator0, DmaPriority},
-    dma_buffers,
+    dma::Channel0,
     gpio::{AnyPin, Input, Output, PullUp, PushPull},
     peripherals::SPI2,
     spi::{
-        master::{dma::{SpiDma, WithDmaSpi2}, Spi},
+        master::dma::SpiDma,
         FullDuplexMode,
     },
 };
@@ -30,23 +28,10 @@ const LORA_MAX_PACKET_SIZE_BYTES: usize = 255;
 
 #[task]
 pub async fn receive(
-    spi: Spi<'static, SPI2, FullDuplexMode>,
+    spi: SpiDevice<'static, NoopRawMutex, SpiDma<'static, SPI2, Channel0, FullDuplexMode>, AnyPin<Output<PushPull>>>,
     lora_irq: AnyPin<Input<PullUp>>,
-    lora_rst: AnyPin<Output<PushPull>>,
-    lora_spi_csb: AnyPin<Output<PushPull>>,
-    dma_channel: ChannelCreator0,
+    lora_rst: AnyPin<Output<PushPull>>
 ) -> ! {
-    let (_, mut tx_descriptors, rx_buffer, mut rx_descriptors) = dma_buffers!(128);
-
-    let spi = spi.with_dma(dma_channel.configure(
-        false,
-        &mut tx_descriptors,
-        &mut rx_descriptors,
-        DmaPriority::Priority0,
-    ));
-
-    let spi = ExclusiveDevice::new(spi, lora_spi_csb, Delay);
-
     // We're using an SX1278, but the SX1276 variant seems to work
     let config = sx127x::Config {
         chip: sx127x::Sx127xVariant::Sx1276,
@@ -68,7 +53,7 @@ pub async fn receive(
         match lora.create_rx_packet_params(
             16,
             false,
-            rx_buffer.len() as u8,
+            LORA_MAX_PACKET_SIZE_BYTES as u8,
             true,
             false,
             &modulation_parameters,

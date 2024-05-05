@@ -5,21 +5,16 @@
 
 use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
 use embassy_executor::{task, Spawner};
-use embassy_sync::{blocking_mutex::raw::NoopRawMutex, mutex::Mutex};
 use embassy_time::Timer;
-use static_cell::StaticCell;
 
 use esp_hal::{
-    clock::{ClockControl, CpuClock}, dma::{Channel0, Dma, DmaDescriptor, DmaPriority}, dma_descriptors, embassy, peripherals::{Peripherals, SPI2}, prelude::*, spi::{master::{dma::SpiDma, prelude::*, Spi}, FullDuplexMode, SpiMode}, timer::TimerGroup, IO
+    clock::{ClockControl, CpuClock}, embassy, peripherals::Peripherals, prelude::*, timer::TimerGroup, IO
 };
 
 use defmt::info;
 use esp_backtrace as _;
 
-use stack_ripper::{gps, lora, state};
-
-static SPI_BUS: StaticCell<Mutex<NoopRawMutex, SpiDma<'static, SPI2, Channel0, FullDuplexMode>>> = StaticCell::new();
-static DMA_DESCRIPTORS: StaticCell<([DmaDescriptor; 8], [DmaDescriptor; 8])> = StaticCell::new();
+use stack_ripper::{gps, lora, spi, state};
 
 #[task]
 async fn print_state() -> ! {
@@ -47,29 +42,18 @@ async fn main(_spawner: Spawner) -> () {
     let spi_clck_pin = io.pins.gpio0;
     let spi_miso_pin = io.pins.gpio1;
     let spi_mosi_pin = io.pins.gpio2;
-
-    let dma = Dma::new(peripherals.DMA);
-    let dma_channel = dma.channel0;
-
-    let dma_descriptors = DMA_DESCRIPTORS.init(dma_descriptors!(32000));
-
-    // Max bitrate of the SX1278 is 300kbps vs. 2.2mbps for the NEO-M8. We have to pick the lower of the two.
-    let spi = Spi::new(peripherals.SPI2, 300_u32.kHz(), SpiMode::Mode0, &clocks)
-        .with_sck(spi_clck_pin)
-        .with_mosi(spi_mosi_pin)
-        .with_miso(spi_miso_pin)
-        .with_dma(dma_channel.configure(
-            false,
-            &mut dma_descriptors.0,
-            &mut dma_descriptors.1,
-            DmaPriority::Priority0,
-        ));
-
-    let spi_bus = SPI_BUS.init(Mutex::new(spi));
+    
+    let spi_bus = spi::init(
+        peripherals.DMA, 
+        peripherals.SPI2,
+        &clocks, 
+        spi_clck_pin.degrade(), 
+        spi_mosi_pin.degrade(), 
+        spi_miso_pin.degrade()
+    );
 
     // Setup GPS task
     let gps_csb_pin = io.pins.gpio21.into_push_pull_output();
-
     let gps_spi_device = SpiDevice::new(spi_bus, gps_csb_pin.into());
     
     _spawner.spawn(gps::sample_spi(gps_spi_device)).unwrap();

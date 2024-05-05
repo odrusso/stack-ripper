@@ -3,6 +3,7 @@
 #![no_std]
 
 pub mod i2c;
+pub mod spi;
 
 pub mod alt;
 pub mod gps;
