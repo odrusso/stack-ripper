@@ -42,9 +42,9 @@ async fn main(_spawner: Spawner) -> () {
     info!("Initializing compete");
 
     // Set SPI bus
-    let spi_clock = io.pins.gpio3;
-    let spi_mosi = io.pins.gpio1;
-    let spi_miso = io.pins.gpio2;
+    let spi_clock = io.pins.gpio4;
+    let spi_miso = io.pins.gpio3;
+    let spi_mosi = io.pins.gpio2;
 
     let spi_bus = spi::init(
         peripherals.DMA, 
@@ -55,11 +55,11 @@ async fn main(_spawner: Spawner) -> () {
         spi_miso.degrade()
     );
 
-    let lora_spi_csb = io.pins.gpio0.into_push_pull_output();
-    let lora_rst = io.pins.gpio10.into_push_pull_output();
-    let lora_irq = io.pins.gpio4.into_pull_up_input();
-
+    let lora_spi_csb = io.pins.gpio1.into_push_pull_output();
     let lora_spi = SpiDevice::new(spi_bus, lora_spi_csb.into());
+
+    let lora_rst = io.pins.gpio6.into_push_pull_output();
+    let lora_irq = io.pins.gpio5.into_pull_up_input();
 
     _spawner
         .spawn(lora::receive(
