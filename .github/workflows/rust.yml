@@ -16,10 +16,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Use nightly rust toolchain
+      run: rustup toolchain install nightly --component rust-src
     - name: Add target
       run: rustup target add riscv32imc-unknown-none-elf
-    - name: Use nightly rust
-      run: rustup default nightly
     - name: Build
       run: cargo build --verbose
     # - name: Run tests
