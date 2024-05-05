@@ -16,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Use nightly rust
+      run: rustup default nightly
     - name: Add target
       run: rustup target add riscv32imc-unknown-none-elf
     - name: Build
