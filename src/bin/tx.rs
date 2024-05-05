@@ -2,13 +2,17 @@
 #![no_main]
 #![no_std]
 
-
 use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
 use embassy_executor::{task, Spawner};
 use embassy_time::Timer;
 
 use esp_hal::{
-    clock::{ClockControl, CpuClock}, embassy, peripherals::Peripherals, prelude::*, timer::TimerGroup, IO
+    clock::{ClockControl, CpuClock},
+    embassy,
+    peripherals::Peripherals,
+    prelude::*,
+    timer::TimerGroup,
+    IO,
 };
 
 use defmt::info;
@@ -42,20 +46,20 @@ async fn main(_spawner: Spawner) -> () {
     let spi_clck_pin = io.pins.gpio0;
     let spi_miso_pin = io.pins.gpio1;
     let spi_mosi_pin = io.pins.gpio2;
-    
+
     let spi_bus = spi::init(
-        peripherals.DMA, 
+        peripherals.DMA,
         peripherals.SPI2,
-        &clocks, 
-        spi_clck_pin.degrade(), 
-        spi_mosi_pin.degrade(), 
-        spi_miso_pin.degrade()
+        &clocks,
+        spi_clck_pin.degrade(),
+        spi_mosi_pin.degrade(),
+        spi_miso_pin.degrade(),
     );
 
     // Setup GPS task
     let gps_csb_pin = io.pins.gpio21.into_push_pull_output();
     let gps_spi_device = SpiDevice::new(spi_bus, gps_csb_pin.into());
-    
+
     _spawner.spawn(gps::sample_spi(gps_spi_device)).unwrap();
 
     // Setup LoRA Task
@@ -69,7 +73,7 @@ async fn main(_spawner: Spawner) -> () {
         .spawn(lora::transmit(
             lora_spi_device,
             lora_irq_pin.into(),
-            lora_rst_pin.into()
+            lora_rst_pin.into(),
         ))
         .ok();
 

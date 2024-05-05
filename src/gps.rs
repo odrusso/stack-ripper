@@ -4,7 +4,13 @@ use embassy_executor::task;
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
 use embassy_time::Timer;
 use embedded_io_async::Read;
-use esp_hal::{dma::Channel0, gpio::{AnyPin, Output, PushPull}, peripherals::{SPI2, UART0}, spi::{master::dma::SpiDma, FullDuplexMode}, UartRx};
+use esp_hal::{
+    dma::Channel0,
+    gpio::{AnyPin, Output, PushPull},
+    peripherals::{SPI2, UART0},
+    spi::{master::dma::SpiDma, FullDuplexMode},
+    UartRx,
+};
 use nmea0183::{ParseResult, Parser, Sentence};
 
 use crate::state::STATE;
@@ -47,7 +53,7 @@ pub async fn sample_uart(mut rx: UartRx<'static, UART0>) -> ! {
                     while eol_buff[0] != b'\n' {
                         Read::read_exact(&mut rx, &mut eol_buff).await.unwrap();
                     }
-                    
+
                     // The very last byte we consumed was a LF
                     // Presumably - the byte before that was a CR
                     // Now whatever is next should be the start of another NMEA message
@@ -57,9 +63,15 @@ pub async fn sample_uart(mut rx: UartRx<'static, UART0>) -> ! {
     }
 }
 
-
 #[task]
-pub async fn sample_spi(mut spi: SpiDevice<'static, NoopRawMutex, SpiDma<'static, SPI2, Channel0, FullDuplexMode>, AnyPin<Output<PushPull>>>) -> ! {
+pub async fn sample_spi(
+    mut spi: SpiDevice<
+        'static,
+        NoopRawMutex,
+        SpiDma<'static, SPI2, Channel0, FullDuplexMode>,
+        AnyPin<Output<PushPull>>,
+    >,
+) -> ! {
     let mut read_buffer: [u8; NMEA_BUFFER_SIZE] = [0u8; NMEA_BUFFER_SIZE];
 
     // Apparently - the way to read from the NEO-M8 is to concurrently write 1s to the MOSI while reading from MISO
@@ -71,7 +83,9 @@ pub async fn sample_spi(mut spi: SpiDevice<'static, NoopRawMutex, SpiDma<'static
 
     loop {
         // Read the exact amount of words for a NEMA sentence
-        embedded_hal_async::spi::SpiDevice::transfer(&mut spi, &mut read_buffer, &write_buffer).await.unwrap();
+        embedded_hal_async::spi::SpiDevice::transfer(&mut spi, &mut read_buffer, &write_buffer)
+            .await
+            .unwrap();
 
         // If the read buffer is all 0xFF, (1s) then we should stop polling and wait for a bit.
         if read_array_done(&read_buffer) {

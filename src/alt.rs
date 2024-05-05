@@ -16,7 +16,6 @@ fn get_absolute_altitude_from_pressure(pressure: f32) -> f32 {
 
 #[task]
 pub async fn sample(i2c: I2cDevice<'static, NoopRawMutex, I2C<'static, I2C0>>) -> ! {
-    
     let mut alitmeter = AsyncBME280::new_primary(i2c);
     alitmeter.init(&mut Delay).await.unwrap();
 

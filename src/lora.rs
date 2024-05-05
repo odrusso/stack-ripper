@@ -7,10 +7,7 @@ use esp_hal::{
     dma::Channel0,
     gpio::{AnyPin, Input, Output, PullUp, PushPull},
     peripherals::SPI2,
-    spi::{
-        master::dma::SpiDma,
-        FullDuplexMode,
-    },
+    spi::{master::dma::SpiDma, FullDuplexMode},
 };
 use lora_phy::{
     iv::GenericSx127xInterfaceVariant,
@@ -28,9 +25,14 @@ const LORA_MAX_PACKET_SIZE_BYTES: usize = 255;
 
 #[task]
 pub async fn receive(
-    spi: SpiDevice<'static, NoopRawMutex, SpiDma<'static, SPI2, Channel0, FullDuplexMode>, AnyPin<Output<PushPull>>>,
+    spi: SpiDevice<
+        'static,
+        NoopRawMutex,
+        SpiDma<'static, SPI2, Channel0, FullDuplexMode>,
+        AnyPin<Output<PushPull>>,
+    >,
     lora_irq: AnyPin<Input<PullUp>>,
-    lora_rst: AnyPin<Output<PushPull>>
+    lora_rst: AnyPin<Output<PushPull>>,
 ) -> ! {
     // We're using an SX1278, but the SX1276 variant seems to work
     let config = sx127x::Config {
@@ -102,9 +104,14 @@ pub async fn receive(
 
 #[task]
 pub async fn transmit(
-    spi: SpiDevice<'static, NoopRawMutex, SpiDma<'static, SPI2, Channel0, FullDuplexMode>, AnyPin<Output<PushPull>>>,
+    spi: SpiDevice<
+        'static,
+        NoopRawMutex,
+        SpiDma<'static, SPI2, Channel0, FullDuplexMode>,
+        AnyPin<Output<PushPull>>,
+    >,
     lora_irq: AnyPin<Input<PullUp>>,
-    lora_rst: AnyPin<Output<PushPull>>
+    lora_rst: AnyPin<Output<PushPull>>,
 ) -> ! {
     // We're using an SX1278, but the SX1276 variant seems to work
     let config = sx127x::Config {
@@ -119,9 +126,7 @@ pub async fn transmit(
 
     let sx_device = Sx127x::new(spi, interface_variant, config);
 
-    let mut lora = LoRa::new(sx_device, false, Delay)
-        .await
-        .unwrap();
+    let mut lora = LoRa::new(sx_device, false, Delay).await.unwrap();
 
     let modulation_parameters = create_lora_modulation_parameters(&mut lora);
 
@@ -139,7 +144,7 @@ pub async fn transmit(
         let mut buff = [0u8; LORA_MAX_PACKET_SIZE_BYTES];
         let output = to_slice(&*STATE.lock().await, &mut buff).unwrap();
 
-        info!("Transmitting {:?} bytes over LoRA", output.len());        
+        info!("Transmitting {:?} bytes over LoRA", output.len());
         lora.prepare_for_tx(
             &modulation_parameters,
             &mut tx_packet_parameters,
@@ -165,7 +170,7 @@ fn create_lora_modulation_parameters<T: RadioKind, U: DelayNs>(
 ) -> ModulationParams {
     // These settings result in roughly 977 bps
     // The coding rate can be changed to 4/5 to get to 1.6kbps
-    // But this is about as reliable as we can get without seriosuly harming 
+    // But this is about as reliable as we can get without seriosuly harming
     // bitrate, without having an external TCXO reference clock required
     // for the lower bandwidths to be reliable.
     let params = lora.create_modulation_params(

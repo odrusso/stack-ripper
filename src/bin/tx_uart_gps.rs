@@ -2,7 +2,6 @@
 #![no_main]
 #![no_std]
 
-
 use embassy_embedded_hal::shared_bus::asynch::{i2c::I2cDevice, spi::SpiDevice};
 use embassy_executor::{task, Spawner};
 use embassy_time::Timer;
@@ -11,7 +10,7 @@ use esp_hal::{
     clock::{ClockControl, CpuClock},
     embassy,
     peripherals::Peripherals,
-    prelude::*, 
+    prelude::*,
     timer::TimerGroup,
     uart::{config::Config, TxRxPins},
     Uart, IO,
@@ -21,7 +20,6 @@ use defmt::info;
 use esp_backtrace as _;
 
 use stack_ripper::{alt, gps, i2c, lora, spi, state};
-
 
 #[task]
 async fn print_state() -> ! {
@@ -57,7 +55,12 @@ async fn main(_spawner: Spawner) -> () {
     // Setup I2C bus
     let i2c_clock = io.pins.gpio8;
     let i2c_data = io.pins.gpio9;
-    let i2c_bus = i2c::init(peripherals.I2C0, &clocks, i2c_clock.degrade(), i2c_data.degrade());
+    let i2c_bus = i2c::init(
+        peripherals.I2C0,
+        &clocks,
+        i2c_clock.degrade(),
+        i2c_data.degrade(),
+    );
 
     let i2c_alt = I2cDevice::new(i2c_bus);
     _spawner.spawn(alt::sample(i2c_alt)).ok();
@@ -68,12 +71,12 @@ async fn main(_spawner: Spawner) -> () {
     let spi_mosi = io.pins.gpio2;
 
     let spi_bus = spi::init(
-        peripherals.DMA, 
+        peripherals.DMA,
         peripherals.SPI2,
-        &clocks, 
-        spi_clock.degrade(), 
-        spi_mosi.degrade(), 
-        spi_miso.degrade()
+        &clocks,
+        spi_clock.degrade(),
+        spi_mosi.degrade(),
+        spi_miso.degrade(),
     );
 
     let lora_spi_csb = io.pins.gpio3.into_push_pull_output();

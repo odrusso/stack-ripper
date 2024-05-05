@@ -10,7 +10,7 @@ use esp_hal::{
     clock::{ClockControl, CpuClock},
     embassy,
     peripherals::Peripherals,
-    prelude::*, 
+    prelude::*,
     timer::TimerGroup,
     IO,
 };
@@ -47,12 +47,12 @@ async fn main(_spawner: Spawner) -> () {
     let spi_mosi = io.pins.gpio2;
 
     let spi_bus = spi::init(
-        peripherals.DMA, 
+        peripherals.DMA,
         peripherals.SPI2,
-        &clocks, 
-        spi_clock.degrade(), 
-        spi_mosi.degrade(), 
-        spi_miso.degrade()
+        &clocks,
+        spi_clock.degrade(),
+        spi_mosi.degrade(),
+        spi_miso.degrade(),
     );
 
     let lora_spi_csb = io.pins.gpio1.into_push_pull_output();
@@ -62,10 +62,6 @@ async fn main(_spawner: Spawner) -> () {
     let lora_irq = io.pins.gpio5.into_pull_up_input();
 
     _spawner
-        .spawn(lora::receive(
-            lora_spi,
-            lora_irq.into(),
-            lora_rst.into()
-        ))
+        .spawn(lora::receive(lora_spi, lora_irq.into(), lora_rst.into()))
         .ok();
 }

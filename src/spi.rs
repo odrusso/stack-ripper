@@ -3,19 +3,28 @@ use fugit::RateExtU32;
 use static_cell::StaticCell;
 
 use esp_hal::{
-    clock::Clocks, dma::{Channel0, Dma, DmaDescriptor, DmaPriority}, dma_descriptors, gpio::{AnyPin, InputOutputAnalogPinType, Unknown}, peripherals::{DMA, SPI2}, spi::{master::{prelude::*, dma::SpiDma, Spi}, FullDuplexMode, SpiMode}
+    clock::Clocks,
+    dma::{Channel0, Dma, DmaDescriptor, DmaPriority},
+    dma_descriptors,
+    gpio::{AnyPin, InputOutputAnalogPinType, Unknown},
+    peripherals::{DMA, SPI2},
+    spi::{
+        master::{dma::SpiDma, prelude::*, Spi},
+        FullDuplexMode, SpiMode,
+    },
 };
 
-static SPI_BUS: StaticCell<Mutex<NoopRawMutex, SpiDma<'static, SPI2, Channel0, FullDuplexMode>>> = StaticCell::new();
+static SPI_BUS: StaticCell<Mutex<NoopRawMutex, SpiDma<'static, SPI2, Channel0, FullDuplexMode>>> =
+    StaticCell::new();
 static DMA_DESCRIPTORS: StaticCell<([DmaDescriptor; 8], [DmaDescriptor; 8])> = StaticCell::new();
 
 pub fn init(
-    dma: DMA, 
-    spi: SPI2, 
+    dma: DMA,
+    spi: SPI2,
     clocks: &Clocks,
     sck: AnyPin<Unknown, InputOutputAnalogPinType>,
     mosi: AnyPin<Unknown, InputOutputAnalogPinType>,
-    miso: AnyPin<Unknown, InputOutputAnalogPinType>
+    miso: AnyPin<Unknown, InputOutputAnalogPinType>,
 ) -> &'static mut Mutex<NoopRawMutex, SpiDma<'static, SPI2, Channel0, FullDuplexMode>> {
     let dma = Dma::new(dma);
     let dma_channel = dma.channel0;
