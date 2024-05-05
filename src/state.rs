@@ -1,6 +1,5 @@
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use defmt::Format;
-use esp_backtrace as _;
 use serde::{Deserialize, Serialize};
 
 // Define and setup the system state

@@ -6,9 +6,6 @@ use esp_hal::{
     clock::Clocks, dma::{Channel0, Dma, DmaDescriptor, DmaPriority}, dma_descriptors, gpio::{AnyPin, InputOutputAnalogPinType, Unknown}, peripherals::{DMA, SPI2}, spi::{master::{prelude::*, dma::SpiDma, Spi}, FullDuplexMode, SpiMode}
 };
 
-use esp_backtrace as _;
-
-
 static SPI_BUS: StaticCell<Mutex<NoopRawMutex, SpiDma<'static, SPI2, Channel0, FullDuplexMode>>> = StaticCell::new();
 static DMA_DESCRIPTORS: StaticCell<([DmaDescriptor; 8], [DmaDescriptor; 8])> = StaticCell::new();
 
