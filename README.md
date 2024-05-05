@@ -42,15 +42,19 @@ Install the prerequisites
 
 ```bash
   rustup default nightly
+  rustup toolchain install nightly --component rust-src
   rustup target add riscv32imc-unknown-none-elf
-  cargo install espflash
-
 ```
 
 Install dependencies & build
 
 ```bash
   cargo build
+```
+
+Install flashing utility
+```bash
+  cargo install espflash
 ```
 
 Flash a device (interactive) with the `rx` software
