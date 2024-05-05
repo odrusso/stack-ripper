@@ -5,15 +5,13 @@
 
 use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
 use embassy_executor::{task, Spawner};
-use embassy_sync::{blocking_mutex::raw::NoopRawMutex, mutex::Mutex};
 use embassy_time::Timer;
 
 use esp_hal::{
     clock::{ClockControl, CpuClock},
     dma::Dma,
     embassy,
-    i2c::I2C,
-    peripherals::{Peripherals, I2C0},
+    peripherals::Peripherals,
     prelude::*, 
     spi::{master::Spi, SpiMode},
     timer::TimerGroup,
@@ -24,10 +22,7 @@ use esp_hal::{
 use defmt::info;
 use esp_backtrace as _;
 
-use stack_ripper::{alt, gps, state};
-use static_cell::StaticCell;
-
-static I2C_BUS: StaticCell<Mutex<NoopRawMutex, I2C<I2C0>>> = StaticCell::new();
+use stack_ripper::{alt, gps, i2c, state};
 
 
 #[task]
@@ -61,19 +56,12 @@ async fn main(_spawner: Spawner) -> () {
     // Note that this task now owns the UART RX line completely
     _spawner.spawn(gps::sample_uart(rx)).unwrap();
 
-    // Setup I2C for barometer
-    let bmp_i2c_clock = io.pins.gpio8;
-    let bmp_i2c_data = io.pins.gpio9;
-    let i2c = I2C::new(
-        peripherals.I2C0,
-        bmp_i2c_data,
-        bmp_i2c_clock,
-        800_u32.kHz(),
-        &clocks,
-    );
+    // Setup I2C bus
+    let i2c_clock = io.pins.gpio8;
+    let i2c_data = io.pins.gpio9;
 
-    let i2c_bus = Mutex::new(i2c);
-    let i2c_bus = I2C_BUS.init(i2c_bus);
+    let i2c_bus = i2c::init(peripherals.I2C0, &clocks, i2c_clock.degrade(), i2c_data.degrade());
+
     let i2c_alt = I2cDevice::new(i2c_bus);
 
     _spawner.spawn(alt::sample(i2c_alt)).ok();

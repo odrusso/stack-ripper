@@ -2,6 +2,8 @@
 #![no_main]
 #![no_std]
 
+pub mod i2c;
+
 pub mod alt;
 pub mod gps;
 pub mod lora;
