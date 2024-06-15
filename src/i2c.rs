@@ -16,7 +16,7 @@ pub fn init(
     clock: AnyPin<Unknown, InputOutputPinType>,
     sda: AnyPin<Unknown, InputOutputPinType>,
 ) -> &'static mut Mutex<NoopRawMutex, I2C<'static, I2C0>> {
-    let i2c = I2C::new(i2c, clock, sda, 800_u32.kHz(), &clocks);
+    let i2c = I2C::new(i2c, sda, clock, 800_u32.kHz(), &clocks);
 
     let i2c_bus = Mutex::new(i2c);
 
