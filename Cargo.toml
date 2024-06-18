@@ -20,7 +20,7 @@ embedded-hal-async  = "1.0.0"
 embedded-hal-bus    = { version = "0.1.0", features = ["async"] }
 embedded-io-async   = "0.6.1"
 
-esp-backtrace       = { version = "0.11.1", features = ["esp32c3", "exception-handler", "panic-handler", "println", "defmt"] }
+esp-backtrace       = { version = "0.12.0", features = ["esp32c3", "exception-handler", "panic-handler", "println"] }
 esp-hal             = { version = "0.16.1", features = ["esp32c3", "async", "embassy", "embassy-executor-thread", "embassy-executor-interrupt", "embassy-time-timg0", "opsram-2m", "defmt"] }
 esp-println         = { version = "0.9.1", features = ["esp32c3", "defmt-espflash", "uart", "log"] }
 defmt               = "0.3.6"
@@ -28,10 +28,7 @@ defmt               = "0.3.6"
 bme280              = { version = "0.5.0", features = ["async", "embedded-hal-async"] }
 nmea0183            = "0.4.0"
 micromath           = "2.1.0"
-
-# Current release of lora-phy doesn't support the stable embedded-hal-async crates, while upstream does.
-# when v3 is out, change this.
-lora-phy            = { git = "https://github.com/lora-rs/lora-rs" }
+lora-phy            = "3.0.0"
 
 fugit               = "0.3.7"
 heapless            = "0.7.17"
