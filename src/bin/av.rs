@@ -7,12 +7,7 @@ use embassy_executor::{task, Spawner};
 use embassy_time::Timer;
 
 use esp_hal::{
-    clock::{ClockControl, CpuClock},
-    embassy,
-    peripherals::Peripherals,
-    prelude::*,
-    timer::TimerGroup,
-    IO,
+    clock::{ClockControl, CpuClock}, gpio::{any_pin::AnyPin, Io}, peripherals::Peripherals, prelude::*, system::SystemControl, timer::timg::TimerGroup
 };
 
 use defmt::info;
@@ -32,22 +27,26 @@ async fn print_state() -> ! {
 async fn main(_spawner: Spawner) -> () {
     info!("Initializing");
 
-    let peripherals = Peripherals::take();
-    let system = peripherals.SYSTEM.split();
+    let peripherals: Peripherals = Peripherals::take();
+    let system = SystemControl::new(peripherals.SYSTEM);
     let clocks = ClockControl::configure(system.clock_control, CpuClock::Clock160MHz).freeze();
-    let timg0 = TimerGroup::new(peripherals.TIMG0, &clocks);
-    embassy::init(&clocks, timg0);
+    let timg0 = TimerGroup::new_async(peripherals.TIMG0, &clocks);
 
-    let io = IO::new(peripherals.GPIO, peripherals.IO_MUX);
+    esp_hal_embassy::init(&clocks, timg0);
+
+    let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
+
+    info!("Initializing compete");
 
     // Setup I2C bus
-    let i2c_clock = io.pins.gpio8;
-    let i2c_data = io.pins.gpio9;
+    let i2c_clock = AnyPin::new(io.pins.gpio8);
+    let i2c_data = AnyPin::new(io.pins.gpio9);
+
     let i2c_bus = i2c::init(
         peripherals.I2C0,
         &clocks,
-        i2c_clock.degrade(),
-        i2c_data.degrade(),
+        i2c_clock,
+        i2c_data,
     );
 
     let i2c_alt = I2cDevice::new(i2c_bus);
