@@ -3,7 +3,7 @@ use embassy_executor::task;
 use embedded_io_async::Read;
 use esp_hal::{
     peripherals::UART0,
-    UartRx,
+    uart::UartRx, Async,
 };
 use nmea0183::{ParseResult, Parser, Sentence};
 
@@ -11,7 +11,7 @@ use crate::state::STATE;
 
 
 #[task]
-pub async fn sample_uart(mut rx: UartRx<'static, UART0>) -> ! {
+pub async fn sample_uart(mut rx: UartRx<'static, UART0, Async>) -> ! {
     // Apparently NMEA sentences are always 79 bytes long, but we'll give this a buffer
     let mut read_buffer: [u8; 1] = [0u8; 1];
 
