@@ -8,11 +8,11 @@ use embassy_time::Timer;
 
 use esp_hal::{
     clock::{ClockControl, CpuClock},
-    embassy,
+    gpio::{any_pin::AnyPin, AnyInput, AnyOutput, Io, Level, Pull},
     peripherals::Peripherals,
     prelude::*,
-    timer::TimerGroup,
-    IO,
+    system::SystemControl,
+    timer::timg::TimerGroup,
 };
 
 use defmt::info;
@@ -32,34 +32,36 @@ async fn print_state() -> ! {
 async fn main(_spawner: Spawner) -> () {
     info!("Initializing");
 
-    let peripherals = Peripherals::take();
-    let system = peripherals.SYSTEM.split();
+    let peripherals: Peripherals = Peripherals::take();
+    let system = SystemControl::new(peripherals.SYSTEM);
     let clocks = ClockControl::configure(system.clock_control, CpuClock::Clock160MHz).freeze();
-    let timg0 = TimerGroup::new(peripherals.TIMG0, &clocks);
-    embassy::init(&clocks, timg0);
-    let io = IO::new(peripherals.GPIO, peripherals.IO_MUX);
+    let timg0 = TimerGroup::new_async(peripherals.TIMG0, &clocks);
+
+    esp_hal_embassy::init(&clocks, timg0);
+
+    let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
 
     info!("Initializing compete");
 
     // Set SPI bus
-    let spi_clock = io.pins.gpio4;
-    let spi_miso = io.pins.gpio3;
-    let spi_mosi = io.pins.gpio2;
+    let spi_clock = AnyPin::new(io.pins.gpio4);
+    let spi_miso = AnyPin::new(io.pins.gpio3);
+    let spi_mosi = AnyPin::new(io.pins.gpio2);
 
     let spi_bus = spi::init(
         peripherals.DMA,
         peripherals.SPI2,
         &clocks,
-        spi_clock.degrade(),
-        spi_mosi.degrade(),
-        spi_miso.degrade(),
+        spi_clock,
+        spi_mosi,
+        spi_miso,
     );
 
-    let lora_spi_csb = io.pins.gpio1.into_push_pull_output();
+    let lora_spi_csb = AnyOutput::new(io.pins.gpio1, Level::High);
     let lora_spi = SpiDevice::new(spi_bus, lora_spi_csb.into());
 
-    let lora_rst = io.pins.gpio6.into_push_pull_output();
-    let lora_irq = io.pins.gpio5.into_pull_up_input();
+    let lora_rst = AnyOutput::new(io.pins.gpio6, Level::High);
+    let lora_irq = AnyInput::new(io.pins.gpio5, Pull::Up);
 
     _spawner
         .spawn(lora::receive(lora_spi, lora_irq.into(), lora_rst.into()))
