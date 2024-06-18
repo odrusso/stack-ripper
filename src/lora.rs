@@ -5,9 +5,10 @@ use embassy_sync::blocking_mutex::raw::NoopRawMutex;
 use embassy_time::{with_timeout, Delay, Duration, Timer};
 use esp_hal::{
     dma::Channel0,
-    gpio::{AnyPin, Input, Output, PullUp, PushPull},
+    gpio::{AnyInput, AnyOutput},
     peripherals::SPI2,
     spi::{master::dma::SpiDma, FullDuplexMode},
+    Async,
 };
 use lora_phy::{
     iv::GenericSx127xInterfaceVariant,
@@ -28,11 +29,11 @@ pub async fn receive(
     spi: SpiDevice<
         'static,
         NoopRawMutex,
-        SpiDma<'static, SPI2, Channel0, FullDuplexMode>,
-        AnyPin<Output<PushPull>>,
+        SpiDma<'static, SPI2, Channel0, FullDuplexMode, Async>,
+        AnyOutput<'static>,
     >,
-    lora_irq: AnyPin<Input<PullUp>>,
-    lora_rst: AnyPin<Output<PushPull>>,
+    lora_irq: AnyInput<'static>,
+    lora_rst: AnyOutput<'static>,
 ) -> ! {
     // We're using an SX1278, but the SX1276 variant seems to work
     let config = sx127x::Config {
@@ -128,11 +129,11 @@ pub async fn transmit(
     spi: SpiDevice<
         'static,
         NoopRawMutex,
-        SpiDma<'static, SPI2, Channel0, FullDuplexMode>,
-        AnyPin<Output<PushPull>>,
+        SpiDma<'static, SPI2, Channel0, FullDuplexMode, Async>,
+        AnyOutput<'static>,
     >,
-    lora_irq: AnyPin<Input<PullUp>>,
-    lora_rst: AnyPin<Output<PushPull>>,
+    lora_irq: AnyInput<'static>,
+    lora_rst: AnyOutput<'static>,
 ) -> ! {
     // We're using an SX1278, but the SX1276 variant seems to work
     let config = sx127x::Config {
