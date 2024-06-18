@@ -1,8 +1,8 @@
-use defmt::info;
+use defmt::{error, info};
 use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
 use embassy_executor::task;
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
-use embassy_time::{Delay, Timer};
+use embassy_time::{with_timeout, Delay, Duration, Timer};
 use esp_hal::{
     dma::Channel0,
     gpio::{AnyPin, Input, Output, PullUp, PushPull},
@@ -71,34 +71,55 @@ pub async fn receive(
         // TODO: Can we move this out of the loop?
         let mut rx_buff = [0u8; LORA_MAX_PACKET_SIZE_BYTES];
 
-        match lora
-            .prepare_for_rx(
+        info!("Preparing for RX");
+        let prepare_rx_timeout_result = with_timeout(
+            Duration::from_secs(10),
+            lora.prepare_for_rx(
                 RxMode::Continuous,
                 &modulation_parameters,
                 &rx_packet_parameters,
-            )
-            .await
-        {
-            Ok(()) => {}
-            Err(err) => {
-                panic!("Prepare for RX error {:?}", err);
+            ),
+        );
+
+        match prepare_rx_timeout_result.await {
+            Ok(Ok(_)) => {}
+            Ok(Err(_)) => {
+                error!("Prepare RX failed");
+                continue;
+            }
+            Err(_) => {
+                error!("Prepare RX timed out after 10 seconds");
+                continue;
             }
         };
 
-        match lora.rx(&rx_packet_parameters, &mut rx_buff).await {
-            Ok((received_len, _rx_pkt_status)) => {
-                info!("rx successful with {} bytes", received_len);
+        info!("Waiting up to 60s for LoRA message...");
+        let rx_timeout_result = with_timeout(
+            Duration::from_secs(60),
+            lora.rx(&rx_packet_parameters, &mut rx_buff),
+        );
+
+        match rx_timeout_result.await {
+            Ok(Ok((received_len, _rx_pkt_status))) => {
+                info!("RX successful, with {} bytes", received_len);
                 info!(
-                    "packet info rssi:{} snr:{}",
+                    "Packet info: RSSI:{} SNR:{}",
                     _rx_pkt_status.rssi, _rx_pkt_status.snr
                 );
 
                 // Deserialize and print
                 let out: State = from_bytes(&rx_buff).unwrap();
-                info!("received state: {:?}", out);
+                info!("Received state: {:?}", out);
             }
-            Err(err) => info!("rx unsuccessful, {:?}", err),
-        }
+            Ok(Err(_)) => {
+                error!("RX failed");
+                continue;
+            }
+            Err(_) => {
+                error!("RX timed out after 60 seconds");
+                continue;
+            }
+        };
     }
 }
 
@@ -128,6 +149,9 @@ pub async fn transmit(
 
     let mut lora = LoRa::new(sx_device, false, Delay).await.unwrap();
 
+    // Do we need to init??
+    lora.init().await.unwrap();
+
     let modulation_parameters = create_lora_modulation_parameters(&mut lora);
 
     let mut tx_packet_parameters = {
@@ -140,28 +164,50 @@ pub async fn transmit(
     };
 
     loop {
+        Timer::after_millis(3_000).await;
+
         // TODO: Can we move setting up this beff to outside the loop?
         let mut buff = [0u8; LORA_MAX_PACKET_SIZE_BYTES];
         let output = to_slice(&*STATE.lock().await, &mut buff).unwrap();
 
         info!("Transmitting {:?} bytes over LoRA", output.len());
-        lora.prepare_for_tx(
-            &modulation_parameters,
-            &mut tx_packet_parameters,
-            20,
-            &output,
-        )
-        .await
-        .unwrap_or(());
+        let prepare_tx_timeout_result = with_timeout(
+            Duration::from_nanos(30),
+            lora.prepare_for_tx(
+                &modulation_parameters,
+                &mut tx_packet_parameters,
+                20,
+                &output,
+            ),
+        );
 
-        // There's not much we can do if this fails
-        lora.tx().await.unwrap_or(());
+        match prepare_tx_timeout_result.await {
+            Ok(Ok(_)) => {}
+            Ok(Err(_)) => {
+                error!("Prepare TX failed");
+                continue;
+            }
+            Err(_) => {
+                error!("Prepare TX timed out after 10 seconds");
+                continue;
+            }
+        };
+
+        let tx_timeout_result = with_timeout(Duration::from_secs(30), lora.tx());
+
+        match tx_timeout_result.await {
+            Ok(Ok(r)) => r,
+            Ok(Err(_)) => {
+                error!("TX failed");
+                continue;
+            }
+            Err(_) => {
+                error!("TX timed out after 10 seconds");
+                continue;
+            }
+        };
 
         info!("LoRA complete");
-
-        // Only transmit once every 10 seconds
-        // Maybe this should be longer...?
-        Timer::after_millis(10_000).await;
     }
 }
 
