@@ -7,7 +7,12 @@ use embassy_executor::{task, Spawner};
 use embassy_time::Timer;
 
 use esp_hal::{
-    clock::{ClockControl, CpuClock}, gpio::{any_pin::AnyPin, Io}, peripherals::Peripherals, prelude::*, system::SystemControl, timer::timg::TimerGroup
+    clock::{ClockControl, CpuClock},
+    gpio::{any_pin::AnyPin, Io},
+    peripherals::Peripherals,
+    prelude::*,
+    system::SystemControl,
+    timer::timg::TimerGroup,
 };
 
 use defmt::info;
@@ -42,12 +47,7 @@ async fn main(_spawner: Spawner) -> () {
     let i2c_clock = AnyPin::new(io.pins.gpio8);
     let i2c_data = AnyPin::new(io.pins.gpio9);
 
-    let i2c_bus = i2c::init(
-        peripherals.I2C0,
-        &clocks,
-        i2c_clock,
-        i2c_data,
-    );
+    let i2c_bus = i2c::init(peripherals.I2C0, &clocks, i2c_clock, i2c_data);
 
     let i2c_alt = I2cDevice::new(i2c_bus);
     _spawner.spawn(alt::sample(i2c_alt)).ok();
