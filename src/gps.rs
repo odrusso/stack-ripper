@@ -1,14 +1,10 @@
 use defmt::{error, info};
 use embassy_executor::task;
 use embedded_io_async::Read;
-use esp_hal::{
-    peripherals::UART0,
-    uart::UartRx, Async,
-};
+use esp_hal::{peripherals::UART0, uart::UartRx, Async};
 use nmea0183::{ParseResult, Parser, Sentence};
 
 use crate::state::STATE;
-
 
 #[task]
 pub async fn sample_uart(mut rx: UartRx<'static, UART0, Async>) -> ! {
@@ -26,7 +22,9 @@ pub async fn sample_uart(mut rx: UartRx<'static, UART0, Async>) -> ! {
         let parsed_message = parser.parse_from_byte(read_buffer[0]);
 
         // Not enough info to prase a message yet
-        if parsed_message.is_none() { continue; }
+        if parsed_message.is_none() {
+            continue;
+        }
 
         // Parsed message but be something, match it
         match parsed_message.unwrap() {
@@ -48,6 +46,5 @@ pub async fn sample_uart(mut rx: UartRx<'static, UART0, Async>) -> ! {
                 error!("NMEA Parse Error: {:?}\n", e);
             }
         }
-
     }
 }
