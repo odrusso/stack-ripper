@@ -49,8 +49,8 @@ async fn main(_spawner: Spawner) -> () {
 
     let i2c_bus = i2c::init(peripherals.I2C0, &clocks, i2c_clock, i2c_data);
 
-    let i2c_alt = I2cDevice::new(i2c_bus);
-    _spawner.spawn(alt::sample(i2c_alt)).ok();
+    // let i2c_alt = I2cDevice::new(i2c_bus);
+    // _spawner.spawn(alt::sample(i2c_alt)).ok();
 
     let i2c_imu = I2cDevice::new(i2c_bus);
     _spawner.spawn(imu::sample(i2c_imu)).ok();
