@@ -1,4 +1,4 @@
-use bme280::i2c::AsyncBME280;
+// use bme280::i2c::AsyncBME280;
 use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
 use embassy_executor::task;
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
@@ -16,25 +16,25 @@ fn get_absolute_altitude_from_pressure(pressure: f32) -> f32 {
 
 #[task]
 pub async fn sample(i2c: I2cDevice<'static, NoopRawMutex, I2C<'static, I2C0, Async>>) -> ! {
-    let mut alitmeter = AsyncBME280::new_primary(i2c);
-    alitmeter.init(&mut Delay).await.unwrap();
+    // let mut alitmeter = AsyncBME280::new_primary(i2c);
+    // alitmeter.init(&mut Delay).await.unwrap();
 
-    // Idk try waiting 1 sec for things to get going?
-    Timer::after_millis(5_000).await;
+    // // Idk try waiting 1 sec for things to get going?
+    // Timer::after_millis(5_000).await;
 
-    let starting_alt = alitmeter.measure(&mut Delay).await.unwrap();
-    let starting_alt = get_absolute_altitude_from_pressure(starting_alt.pressure);
+    // let starting_alt = alitmeter.measure(&mut Delay).await.unwrap();
+    // let starting_alt = get_absolute_altitude_from_pressure(starting_alt.pressure);
 
     loop {
-        let current_alt = alitmeter.measure(&mut Delay).await.unwrap();
-        {
-            let mut state = STATE.lock().await;
-            let alt = get_absolute_altitude_from_pressure(current_alt.pressure);
-            state.aaa = Some(alt);
-            state.aar = Some(alt - starting_alt);
-            state.aaa = Some(current_alt.temperature)
-        }
+        // let current_alt = alitmeter.measure(&mut Delay).await.unwrap();
+        // {
+        //     let mut state = STATE.lock().await;
+        //     let alt = get_absolute_altitude_from_pressure(current_alt.pressure);
+        //     state.aaa = Some(alt);
+        //     state.aar = Some(alt - starting_alt);
+        //     state.aaa = Some(current_alt.temperature)
+        // }
 
-        Timer::after_millis(1_000).await;
+        // Timer::after_millis(1_000).await;
     }
 }
