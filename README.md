@@ -38,11 +38,10 @@ Each prehipheral is maintained in a resuable library in `/src/[prehipheral].rs`
 
 ## Getting started
 
-Install the prerequisites
+Install the prerequisites (not required if `rustup` automatically detects `rust-toolchain.toml`)
 
 ```bash
-  rustup default nightly
-  rustup toolchain install nightly --component rust-src
+  rustup toolchain install stable --component rust-src
   rustup target add riscv32imc-unknown-none-elf
 ```
 
