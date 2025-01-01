@@ -56,9 +56,9 @@ async fn main(_spawner: Spawner) -> () {
     // _spawner.spawn(gps::sample_uart(rx)).unwrap();
 
     // Setup SPI bus
-    let spi_clock = AnyPin::new(io.pins.gpio21);
-    let spi_miso = AnyPin::new(io.pins.gpio20);
-    let spi_mosi = AnyPin::new(io.pins.gpio10);
+    let spi_clock = AnyPin::new(io.pins.gpio20);
+    let spi_miso = AnyPin::new(io.pins.gpio21);
+    let spi_mosi = AnyPin::new(io.pins.gpio1);
 
     let spi_bus = spi::init(
         peripherals.DMA,
@@ -69,11 +69,11 @@ async fn main(_spawner: Spawner) -> () {
         spi_miso,
     );
 
-    let lora_spi_csb = AnyOutput::new(io.pins.gpio7, Level::High);
+    let lora_spi_csb = AnyOutput::new(io.pins.gpio0, Level::High);
     let lora_spi = SpiDevice::new(spi_bus, lora_spi_csb.into());
 
-    let lora_rst: AnyOutput<'_> = AnyOutput::new(io.pins.gpio5, Level::High);
-    let lora_irq = AnyInput::new(io.pins.gpio6, Pull::Up);
+    let lora_rst: AnyOutput<'_> = AnyOutput::new(io.pins.gpio10, Level::High);
+    let lora_irq = AnyInput::new(io.pins.gpio2, Pull::Up);
 
     _spawner
         .spawn(lora::transmit(lora_spi, lora_irq, lora_rst))
