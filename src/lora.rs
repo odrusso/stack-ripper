@@ -4,7 +4,9 @@ use embassy_executor::task;
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
 use embassy_time::{with_timeout, Delay, Duration, Timer};
 use esp_hal::{
-    gpio::{AnyPin, Input, Output}, spi::master::SpiDmaBus, Async
+    gpio::{AnyPin, Input, Output},
+    spi::master::SpiDmaBus,
+    Async,
 };
 use lora_phy::{
     iv::GenericSx127xInterfaceVariant,
@@ -22,12 +24,7 @@ const LORA_MAX_PACKET_SIZE_BYTES: usize = 255;
 
 #[task]
 pub async fn receive(
-    spi: SpiDevice<
-        'static,
-        NoopRawMutex,
-        SpiDmaBus<'static, Async>,
-        Output<'static, AnyPin>,
-    >,
+    spi: SpiDevice<'static, NoopRawMutex, SpiDmaBus<'static, Async>, Output<'static, AnyPin>>,
     lora_irq: Input<'static, AnyPin>,
     lora_rst: Output<'static, AnyPin>,
 ) -> ! {
@@ -122,12 +119,7 @@ pub async fn receive(
 
 #[task]
 pub async fn transmit(
-    spi: SpiDevice<
-        'static,
-        NoopRawMutex,
-        SpiDmaBus<'static, Async>,
-        Output<'static, AnyPin>,
-    >,
+    spi: SpiDevice<'static, NoopRawMutex, SpiDmaBus<'static, Async>, Output<'static, AnyPin>>,
     lora_irq: Input<'static, AnyPin>,
     lora_rst: Output<'static, AnyPin>,
 ) -> ! {
@@ -198,7 +190,7 @@ pub async fn transmit(
             Ok(Ok(r)) => {
                 info!("TX succeeded");
                 r
-            },
+            }
             Ok(Err(_)) => {
                 error!("TX failed");
                 continue;

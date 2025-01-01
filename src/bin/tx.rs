@@ -6,7 +6,11 @@ use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
 use embassy_executor::Spawner;
 
 use esp_hal::{
-    gpio::{Input, Level, Output, Pull}, peripherals::Peripherals, prelude::*, timer::timg::TimerGroup, uart::{Config, Uart}
+    gpio::{Input, Level, Output, Pull},
+    peripherals::Peripherals,
+    prelude::*,
+    timer::timg::TimerGroup,
+    uart::{Config, Uart},
 };
 
 use defmt::info;
@@ -54,10 +58,10 @@ async fn main(_spawner: Spawner) -> () {
     );
 
     let lora_spi_csb = Output::new(peripherals.GPIO0.degrade(), Level::High);
-    let lora_spi= SpiDevice::new(spi_bus, lora_spi_csb);
+    let lora_spi = SpiDevice::new(spi_bus, lora_spi_csb);
 
     let lora_rst = Output::new(peripherals.GPIO10.degrade(), Level::High);
-    let lora_irq = Input::new(peripherals.GPIO2.degrade(),  Pull::Up);
+    let lora_irq = Input::new(peripherals.GPIO2.degrade(), Pull::Up);
 
     _spawner
         .spawn(lora::transmit(lora_spi, lora_irq, lora_rst))

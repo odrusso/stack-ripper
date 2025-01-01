@@ -2,16 +2,16 @@
 #![no_main]
 #![no_std]
 
+use defmt::info;
 use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
 use embassy_executor::Spawner;
 use embassy_time::Timer;
+use esp_backtrace as _;
 use esp_hal::{
     gpio::{Input, Level, Output, Pin, Pull},
     peripherals::Peripherals,
     timer::timg::TimerGroup,
 };
-use defmt::info;
-use esp_backtrace as _;
 
 use stack_ripper::{lora, spi, state};
 
@@ -49,10 +49,10 @@ async fn main(spawner: Spawner) {
 
     let lora_spi_csb = Output::new(peripherals.GPIO1.degrade(), Level::High);
 
-    let lora_spi= SpiDevice::new(spi_bus, lora_spi_csb);
+    let lora_spi = SpiDevice::new(spi_bus, lora_spi_csb);
 
     let lora_rst = Output::new(peripherals.GPIO6.degrade(), Level::High);
-    let lora_irq = Input::new(peripherals.GPIO5.degrade(),  Pull::Up);
+    let lora_irq = Input::new(peripherals.GPIO5.degrade(), Pull::Up);
 
     spawner
         .spawn(lora::receive(lora_spi, lora_irq, lora_rst))

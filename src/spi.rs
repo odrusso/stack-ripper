@@ -3,9 +3,15 @@ use fugit::RateExtU32;
 use static_cell::StaticCell;
 
 use esp_hal::{
-    dma::{Dma, DmaPriority, DmaRxBuf, DmaTxBuf}, dma_buffers, gpio::AnyPin, peripherals::{DMA, SPI2}, spi::{
-        master::{Config, Spi, SpiDmaBus}, SpiMode,
-    }, Async
+    dma::{Dma, DmaPriority, DmaRxBuf, DmaTxBuf},
+    dma_buffers,
+    gpio::AnyPin,
+    peripherals::{DMA, SPI2},
+    spi::{
+        master::{Config, Spi, SpiDmaBus},
+        SpiMode,
+    },
+    Async,
 };
 
 static SPI_BUS: StaticCell<Mutex<NoopRawMutex, SpiDmaBus<'static, Async>>> = StaticCell::new();
@@ -17,7 +23,6 @@ pub fn init(
     mosi: AnyPin,
     miso: AnyPin,
 ) -> &'static mut Mutex<NoopRawMutex, SpiDmaBus<'static, Async>> {
-
     let dma = Dma::new(dma);
     let dma_channel = dma.channel0;
 

@@ -1,7 +1,10 @@
 use defmt::{error, info};
 use embassy_executor::task;
 use embedded_io_async::Read;
-use esp_hal::{uart::{AnyUart, UartRx}, Async};
+use esp_hal::{
+    uart::{AnyUart, UartRx},
+    Async,
+};
 use nmea0183::{datetime::Time, ParseResult, Parser, Sentence};
 
 use crate::state::STATE;
@@ -16,7 +19,7 @@ fn get_time(time: Time) -> i32 {
 #[task]
 pub async fn sample_uart(mut rx: UartRx<'static, Async, AnyUart>) -> ! {
     // Apparently NMEA sentences are always 79 bytes long, but that doesn't seem to be true
-    // We'll just go 1 byte at a time, and let the parser deal with it. 
+    // We'll just go 1 byte at a time, and let the parser deal with it.
     let mut read_buffer: [u8; 1] = [0u8; 1];
 
     // We only want GGA/GLL sentences parsed, which contain the main GPS info we need
@@ -40,8 +43,7 @@ pub async fn sample_uart(mut rx: UartRx<'static, Async, AnyUart>) -> ! {
 
         let message = parser.parse_from_byte(read_buffer[0]);
 
-        if message.is_none()
-        {
+        if message.is_none() {
             continue;
         }
 
