@@ -19,19 +19,12 @@ The reciever (`rx`) has:
 - an SX1278-based LoRA Radio
 
 The transmitter (`tx`) additionally includes:
-- a u-blox NEO-M8N/MAX-M8N GNSS module,
-- a custom LiPo power regulation and monitoring
-
-The full avionics setup (`av`) additionally includes:
-- a BMP280 altimeter,
-- a BMO055 IMU,
-- multiple n-MOSFET terminals for firing pyrotechnic charges,
-- additional hardware lockouts preventing unwanted firings.
+- a u-blox GNSS module,
 
 ### Software 
 All written in async Rust, using [embassy](https://embassy.dev).
 
-Each platform (`rx`, `tx`, and `av`) has a seperate binary, in `/src/bin/[platform].rs`.
+Each platform has a seperate binary, in `/src/bin/[platform].rs`.
 
 Each prehipheral is maintained in a resuable library in `/src/[prehipheral].rs`
 

@@ -10,6 +10,7 @@ pub struct State {
     pub ga: Option<f32>,  // GPS reported altitude, meters
     pub aaa: Option<f32>, // Altimeter-reported altitude absolute, meters
     pub aar: Option<f32>, // Altimeter-reported altitude reletive from starting height, delta meters
+    pub t: Option<i32>    // Time, in HHMMSS (UTC)
 }
 
 pub static STATE: Mutex<CriticalSectionRawMutex, State> = Mutex::new(State {
@@ -18,4 +19,5 @@ pub static STATE: Mutex<CriticalSectionRawMutex, State> = Mutex::new(State {
     ga: None,
     aaa: None,
     aar: None,
+    t: None,
 });

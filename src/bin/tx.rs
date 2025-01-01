@@ -3,8 +3,7 @@
 #![no_std]
 
 use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
-use embassy_executor::{task, Spawner};
-use embassy_time::Timer;
+use embassy_executor::Spawner;
 
 use esp_hal::{
     gpio::{Input, Level, Output, Pull}, peripherals::Peripherals, prelude::*, timer::timg::TimerGroup, uart::{Config, Uart}
@@ -13,15 +12,7 @@ use esp_hal::{
 use defmt::info;
 use esp_backtrace as _;
 
-use stack_ripper::{gps, lora, spi, state};
-
-#[task]
-async fn print_state() -> ! {
-    loop {
-        info!("{:?}", *state::STATE.lock().await);
-        Timer::after_millis(5_000).await;
-    }
-}
+use stack_ripper::{gps, lora, spi};
 
 #[main]
 async fn main(_spawner: Spawner) -> () {
@@ -71,7 +62,4 @@ async fn main(_spawner: Spawner) -> () {
     _spawner
         .spawn(lora::transmit(lora_spi, lora_irq, lora_rst))
         .ok();
-
-    // Finally set up the task to print state
-    // _spawner.spawn(print_state()).ok();
 }
