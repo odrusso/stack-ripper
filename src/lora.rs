@@ -4,10 +4,8 @@ use embassy_executor::task;
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
 use embassy_time::{with_timeout, Delay, Duration, Timer};
 use esp_hal::{
-    dma::Channel0,
-    gpio::{AnyInput, AnyOutput},
-    peripherals::SPI2,
-    spi::{master::dma::SpiDma, FullDuplexMode},
+    gpio::{AnyPin, Input, Output},
+    spi::master::SpiDmaBus,
     Async,
 };
 use lora_phy::{
@@ -26,14 +24,9 @@ const LORA_MAX_PACKET_SIZE_BYTES: usize = 255;
 
 #[task]
 pub async fn receive(
-    spi: SpiDevice<
-        'static,
-        NoopRawMutex,
-        SpiDma<'static, SPI2, Channel0, FullDuplexMode, Async>,
-        AnyOutput<'static>,
-    >,
-    lora_irq: AnyInput<'static>,
-    lora_rst: AnyOutput<'static>,
+    spi: SpiDevice<'static, NoopRawMutex, SpiDmaBus<'static, Async>, Output<'static, AnyPin>>,
+    lora_irq: Input<'static, AnyPin>,
+    lora_rst: Output<'static, AnyPin>,
 ) -> ! {
     // We're using an SX1278, but the SX1276 variant seems to work
     let config = sx127x::Config {
@@ -126,14 +119,9 @@ pub async fn receive(
 
 #[task]
 pub async fn transmit(
-    spi: SpiDevice<
-        'static,
-        NoopRawMutex,
-        SpiDma<'static, SPI2, Channel0, FullDuplexMode, Async>,
-        AnyOutput<'static>,
-    >,
-    lora_irq: AnyInput<'static>,
-    lora_rst: AnyOutput<'static>,
+    spi: SpiDevice<'static, NoopRawMutex, SpiDmaBus<'static, Async>, Output<'static, AnyPin>>,
+    lora_irq: Input<'static, AnyPin>,
+    lora_rst: Output<'static, AnyPin>,
 ) -> ! {
     // We're using an SX1278, but the SX1276 variant seems to work
     let config = sx127x::Config {
@@ -173,7 +161,7 @@ pub async fn transmit(
 
         info!("Transmitting {:?} bytes over LoRA", output.len());
         let prepare_tx_timeout_result = with_timeout(
-            Duration::from_nanos(30),
+            Duration::from_millis(100),
             lora.prepare_for_tx(
                 &modulation_parameters,
                 &mut tx_packet_parameters,
@@ -183,7 +171,9 @@ pub async fn transmit(
         );
 
         match prepare_tx_timeout_result.await {
-            Ok(Ok(_)) => {}
+            Ok(Ok(_)) => {
+                info!("Prepare TX succeeded")
+            }
             Ok(Err(_)) => {
                 error!("Prepare TX failed");
                 continue;
@@ -197,13 +187,16 @@ pub async fn transmit(
         let tx_timeout_result = with_timeout(Duration::from_secs(30), lora.tx());
 
         match tx_timeout_result.await {
-            Ok(Ok(r)) => r,
+            Ok(Ok(r)) => {
+                info!("TX succeeded");
+                r
+            }
             Ok(Err(_)) => {
                 error!("TX failed");
                 continue;
             }
             Err(_) => {
-                error!("TX timed out after 10 seconds");
+                error!("TX timed out after 30 seconds");
                 continue;
             }
         };

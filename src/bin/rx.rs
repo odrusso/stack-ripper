@@ -2,25 +2,20 @@
 #![no_main]
 #![no_std]
 
+use defmt::info;
 use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
-use embassy_executor::{task, Spawner};
+use embassy_executor::Spawner;
 use embassy_time::Timer;
-
+use esp_backtrace as _;
 use esp_hal::{
-    clock::{ClockControl, CpuClock},
-    gpio::{any_pin::AnyPin, AnyInput, AnyOutput, Io, Level, Pull},
+    gpio::{Input, Level, Output, Pin, Pull},
     peripherals::Peripherals,
-    prelude::*,
-    system::SystemControl,
     timer::timg::TimerGroup,
 };
 
-use defmt::info;
-use esp_backtrace as _;
-
 use stack_ripper::{lora, spi, state};
 
-#[task]
+#[embassy_executor::task]
 async fn print_state() -> ! {
     loop {
         info!("{:?}", *state::STATE.lock().await);
@@ -28,42 +23,38 @@ async fn print_state() -> ! {
     }
 }
 
-#[main]
-async fn main(_spawner: Spawner) -> () {
+#[esp_hal_embassy::main]
+async fn main(spawner: Spawner) {
     info!("Initializing");
 
-    let peripherals: Peripherals = Peripherals::take();
-    let system = SystemControl::new(peripherals.SYSTEM);
-    let clocks = ClockControl::configure(system.clock_control, CpuClock::Clock160MHz).freeze();
-    let timg0 = TimerGroup::new_async(peripherals.TIMG0, &clocks);
+    let peripherals: Peripherals = esp_hal::init(esp_hal::Config::default());
+    let timg0 = TimerGroup::new(peripherals.TIMG0);
 
-    esp_hal_embassy::init(&clocks, timg0);
-
-    let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
+    esp_hal_embassy::init(timg0.timer0);
 
     info!("Initializing compete");
 
     // Set SPI bus
-    let spi_clock = AnyPin::new(io.pins.gpio4);
-    let spi_miso = AnyPin::new(io.pins.gpio3);
-    let spi_mosi = AnyPin::new(io.pins.gpio2);
+    let spi_clock = peripherals.GPIO4.degrade();
+    let spi_miso = peripherals.GPIO3.degrade();
+    let spi_mosi = peripherals.GPIO2.degrade();
 
     let spi_bus = spi::init(
         peripherals.DMA,
         peripherals.SPI2,
-        &clocks,
         spi_clock,
         spi_mosi,
         spi_miso,
     );
 
-    let lora_spi_csb = AnyOutput::new(io.pins.gpio1, Level::High);
-    let lora_spi = SpiDevice::new(spi_bus, lora_spi_csb.into());
+    let lora_spi_csb = Output::new(peripherals.GPIO1.degrade(), Level::High);
 
-    let lora_rst = AnyOutput::new(io.pins.gpio6, Level::High);
-    let lora_irq = AnyInput::new(io.pins.gpio5, Pull::Up);
+    let lora_spi = SpiDevice::new(spi_bus, lora_spi_csb);
 
-    _spawner
-        .spawn(lora::receive(lora_spi, lora_irq.into(), lora_rst.into()))
+    let lora_rst = Output::new(peripherals.GPIO6.degrade(), Level::High);
+    let lora_irq = Input::new(peripherals.GPIO5.degrade(), Pull::Up);
+
+    spawner
+        .spawn(lora::receive(lora_spi, lora_irq, lora_rst))
         .ok();
 }
