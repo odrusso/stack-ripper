@@ -35,7 +35,7 @@ pub fn init(
     let dma_descriptors = DMA_DESCRIPTORS.init(dma_descriptors!(32000));
 
     // Max bitrate of the SX1278 is 300kbps vs. 2.2mbps for the NEO-M8. We have to pick the lower of the two.
-    let spi = Spi::new(spi, 300.kHz(), SpiMode::Mode0, &clocks)
+    let spi = Spi::new(spi, 22.kHz(), SpiMode::Mode0, &clocks)
         .with_sck(sck)
         .with_mosi(mosi)
         .with_miso(miso)

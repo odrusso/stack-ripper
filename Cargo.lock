@@ -846,9 +846,9 @@ checksum = "fe94d1a6dac71b9d54e7a76eb093fdb8e622601c3515f15e8cdca197d663b41c"
 
 [[package]]
 name = "lora-phy"
-version = "3.0.0"
+version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "592e30f03dd6ce6fc756fbe409cf705de3ecac60c669e2f0fe43de135f178812"
+checksum = "61471c3b2909789e3332083577f6cf6c41a4fcf37674ef15156bcbb20504ac65"
 dependencies = [
  "defmt",
  "embedded-hal 1.0.0",

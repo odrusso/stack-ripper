@@ -173,7 +173,7 @@ pub async fn transmit(
 
         info!("Transmitting {:?} bytes over LoRA", output.len());
         let prepare_tx_timeout_result = with_timeout(
-            Duration::from_nanos(30),
+            Duration::from_millis(100),
             lora.prepare_for_tx(
                 &modulation_parameters,
                 &mut tx_packet_parameters,
@@ -183,7 +183,9 @@ pub async fn transmit(
         );
 
         match prepare_tx_timeout_result.await {
-            Ok(Ok(_)) => {}
+            Ok(Ok(_)) => {
+                info!("Prepare TX succeeded")
+            }
             Ok(Err(_)) => {
                 error!("Prepare TX failed");
                 continue;
@@ -197,13 +199,16 @@ pub async fn transmit(
         let tx_timeout_result = with_timeout(Duration::from_secs(30), lora.tx());
 
         match tx_timeout_result.await {
-            Ok(Ok(r)) => r,
+            Ok(Ok(r)) => {
+                info!("TX succeeded");
+                r
+            },
             Ok(Err(_)) => {
                 error!("TX failed");
                 continue;
             }
             Err(_) => {
-                error!("TX timed out after 10 seconds");
+                error!("TX timed out after 30 seconds");
                 continue;
             }
         };
