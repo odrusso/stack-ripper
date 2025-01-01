@@ -49,37 +49,37 @@ async fn main(_spawner: Spawner) -> () {
     info!("Initializing compete");
 
     // Setup UART for GPS
-    let uart_pins = Some(TxRxPins::new_tx_rx(io.pins.gpio21, io.pins.gpio20));
-    let uart_config = Config::default().baudrate(9200);
-    let uart = Uart::new_with_config(peripherals.UART0, uart_config, uart_pins, &clocks);
+    // let uart_pins = Some(TxRxPins::new_tx_rx(io.pins.gpio21, io.pins.gpio20));
+    // let uart_config = Config::default().baudrate(9200);
+    // let uart = Uart::new_with_config(peripherals.UART0, uart_config, uart_pins, &clocks);
 
-    let (_, rx) = uart.split();
+    // let (_, rx) = uart.split();
 
     // Note that this task now owns the UART RX line completely
     // _spawner.spawn(gps::sample(rx)).unwrap();
 
     // Setup I2C for barometer
-    let bmp_i2c_clock = io.pins.gpio8;
-    let bmp_i2c_data = io.pins.gpio9;
-    let i2c = I2C::new(
-        peripherals.I2C0,
-        bmp_i2c_data,
-        bmp_i2c_clock,
-        800_u32.kHz(),
-        &clocks,
-    );
+    // let bmp_i2c_clock = io.pins.gpio8;
+    // let bmp_i2c_data = io.pins.gpio9;
+    // let i2c = I2C::new(
+    //     peripherals.I2C0,
+    //     bmp_i2c_data,
+    //     bmp_i2c_clock,
+    //     800_u32.kHz(),
+    //     &clocks,
+    // );
 
     // Note that this task now owns the I2C bus completely
     // _spawner.spawn(alt::sample(i2c)).ok();
 
     // Set SPI for LoRa
-    let lora_spi_clock = io.pins.gpio0;
-    let lora_spi_miso = io.pins.gpio1;
+    let lora_spi_clock = io.pins.gpio4;
+    let lora_spi_miso = io.pins.gpio3;
     let lora_spi_mosi = io.pins.gpio2;
-    let lora_spi_csb = io.pins.gpio3.into_push_pull_output();
+    let lora_spi_csb = io.pins.gpio1.into_push_pull_output();
 
-    let lora_rst = io.pins.gpio10.into_push_pull_output();
-    let lora_irq = io.pins.gpio4.into_pull_up_input();
+    let lora_rst = io.pins.gpio6.into_push_pull_output();
+    let lora_irq = io.pins.gpio5.into_pull_up_input();
 
     let spi = Spi::new(peripherals.SPI2, 200_u32.kHz(), SpiMode::Mode0, &clocks)
         .with_sck(lora_spi_clock)
@@ -90,7 +90,7 @@ async fn main(_spawner: Spawner) -> () {
     let dma_channel = dma.channel0;
 
     _spawner
-        .spawn(lora::receive(
+        .spawn(lora::transmit(
             spi,
             lora_irq.into(),
             lora_rst.into(),

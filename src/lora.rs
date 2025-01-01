@@ -47,7 +47,7 @@ pub async fn receive(
 
     // We're using an SX1278, but the SX1276 variant seems to work
     let config = sx127x::Config {
-        chip: sx127x::Sx127xVariant::Sx1276,
+        chip: sx127x::Sx1276,
         tcxo_used: false,
         rx_boost: true,
         tx_boost: false,
@@ -134,7 +134,7 @@ pub async fn transmit(
 
     // We're using an SX1278, but the SX1276 variant seems to work
     let config = sx127x::Config {
-        chip: sx127x::Sx127xVariant::Sx1276,
+        chip: sx127x::Sx1276,
         tcxo_used: false,
         rx_boost: false,
         tx_boost: true,
