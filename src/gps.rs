@@ -1,13 +1,13 @@
 use defmt::{error, info};
 use embassy_executor::task;
 use embedded_io_async::Read;
-use esp_hal::{peripherals::UART0, uart::UartRx, Async};
+use esp_hal::{peripherals::UART0, uart::{AnyUart, UartRx}, Async};
 use nmea0183::{ParseResult, Parser, Sentence};
 
 use crate::state::STATE;
 
 #[task]
-pub async fn sample_uart(mut rx: UartRx<'static, UART0, Async>) -> ! {
+pub async fn sample_uart(mut rx: UartRx<'static, Async, AnyUart>) -> ! {
     // Apparently NMEA sentences are always 79 bytes long, but we'll give this a buffer
     let mut read_buffer: [u8; 1] = [0u8; 1];
 
@@ -16,8 +16,22 @@ pub async fn sample_uart(mut rx: UartRx<'static, UART0, Async>) -> ! {
     let mut parser: Parser = Parser::new().sentence_only(Sentence::GGA);
 
     loop {
+        info!("waiting for a byte");
+
         // Read one byte
-        Read::read(&mut rx, &mut read_buffer).await.unwrap();
+        // let read_result = Read::read(&mut rx, &mut read_buffer).await;
+
+        // match read_result {
+        //     Ok(_) => {
+        //         read_result.unwrap();
+        //     }
+        //     Err(_) => {
+        //         // Should we empty the buffer here?
+        //         continue;
+        //     }
+        // }
+
+        info!("Read a byte");
 
         let parsed_message = parser.parse_from_byte(read_buffer[0]);
 

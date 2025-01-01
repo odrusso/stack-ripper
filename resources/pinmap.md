@@ -7,9 +7,12 @@ LORA RST -> Pin 6
 LORA IRQ -> Pin 5
 
 # tx/rx breadboard
-LORA NSS -> Pin 7
-LORA MOSI -> Pin 10
-LORA MISO -> Pin 20
-LORA CLK -> Pin 21
-LORA RST -> Pin 5
-LORA IRQ -> Pin 6
+LORA NSS -> Pin 0
+LORA MOSI -> Pin 1
+LORA MISO -> Pin 21
+LORA CLK -> Pin 20
+LORA RST -> Pin 10
+LORA IRQ -> Pin 2
+
+UART RX -> Pin 5
+UART TX -> Pin 6

@@ -3,48 +3,42 @@ use fugit::RateExtU32;
 use static_cell::StaticCell;
 
 use esp_hal::{
-    clock::Clocks,
-    dma::{Channel0, Dma, DmaDescriptor, DmaPriority},
-    dma_descriptors,
-    gpio::any_pin::AnyPin,
-    peripherals::{DMA, SPI2},
-    spi::{
-        master::{dma::SpiDma, prelude::*, Spi},
-        FullDuplexMode, SpiMode,
-    },
-    Async,
+    dma::{Dma, DmaPriority, DmaRxBuf, DmaTxBuf}, dma_buffers, gpio::AnyPin, peripherals::{DMA, SPI2}, spi::{
+        master::{Config, Spi, SpiDmaBus}, SpiMode,
+    }, Async
 };
 
-static SPI_BUS: StaticCell<
-    Mutex<NoopRawMutex, SpiDma<'static, SPI2, Channel0, FullDuplexMode, Async>>,
-> = StaticCell::new();
-
-static DMA_DESCRIPTORS: StaticCell<([DmaDescriptor; 8], [DmaDescriptor; 8])> = StaticCell::new();
+static SPI_BUS: StaticCell<Mutex<NoopRawMutex, SpiDmaBus<'static, Async>>> = StaticCell::new();
 
 pub fn init(
     dma: DMA,
     spi: SPI2,
-    clocks: &Clocks,
-    sck: AnyPin<'static>,
-    mosi: AnyPin<'static>,
-    miso: AnyPin<'static>,
-) -> &'static mut Mutex<NoopRawMutex, SpiDma<'static, SPI2, Channel0, FullDuplexMode, Async>> {
+    sck: AnyPin,
+    mosi: AnyPin,
+    miso: AnyPin,
+) -> &'static mut Mutex<NoopRawMutex, SpiDmaBus<'static, Async>> {
+
     let dma = Dma::new(dma);
     let dma_channel = dma.channel0;
 
-    let dma_descriptors = DMA_DESCRIPTORS.init(dma_descriptors!(32000));
+    let (rx_buffer, rx_descriptors, tx_buffer, tx_descriptors) = dma_buffers!(32000);
+    let dma_rx_buf = DmaRxBuf::new(rx_descriptors, rx_buffer).unwrap();
+    let dma_tx_buf = DmaTxBuf::new(tx_descriptors, tx_buffer).unwrap();
+
+    let spi_config = Config {
+        frequency: 200.kHz(),
+        mode: SpiMode::Mode0,
+        ..Config::default()
+    };
 
     // Max bitrate of the SX1278 is 300kbps vs. 2.2mbps for the NEO-M8. We have to pick the lower of the two.
-    let spi = Spi::new(spi, 22.kHz(), SpiMode::Mode0, &clocks)
+    let spi = Spi::new_with_config(spi, spi_config)
         .with_sck(sck)
         .with_mosi(mosi)
         .with_miso(miso)
-        .with_dma(dma_channel.configure_for_async(
-            false,
-            &mut dma_descriptors.0,
-            &mut dma_descriptors.1,
-            DmaPriority::Priority0,
-        ));
+        .with_dma(dma_channel.configure(false, DmaPriority::Priority0))
+        .with_buffers(dma_rx_buf, dma_tx_buf)
+        .into_async();
 
     SPI_BUS.init(Mutex::new(spi))
 }

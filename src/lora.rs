@@ -4,11 +4,7 @@ use embassy_executor::task;
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
 use embassy_time::{with_timeout, Delay, Duration, Timer};
 use esp_hal::{
-    dma::Channel0,
-    gpio::{AnyInput, AnyOutput},
-    peripherals::SPI2,
-    spi::{master::dma::SpiDma, FullDuplexMode},
-    Async,
+    gpio::{AnyPin, Input, Output}, spi::master::SpiDmaBus, Async
 };
 use lora_phy::{
     iv::GenericSx127xInterfaceVariant,
@@ -29,11 +25,11 @@ pub async fn receive(
     spi: SpiDevice<
         'static,
         NoopRawMutex,
-        SpiDma<'static, SPI2, Channel0, FullDuplexMode, Async>,
-        AnyOutput<'static>,
+        SpiDmaBus<'static, Async>,
+        Output<'static, AnyPin>,
     >,
-    lora_irq: AnyInput<'static>,
-    lora_rst: AnyOutput<'static>,
+    lora_irq: Input<'static, AnyPin>,
+    lora_rst: Output<'static, AnyPin>,
 ) -> ! {
     // We're using an SX1278, but the SX1276 variant seems to work
     let config = sx127x::Config {
@@ -129,11 +125,11 @@ pub async fn transmit(
     spi: SpiDevice<
         'static,
         NoopRawMutex,
-        SpiDma<'static, SPI2, Channel0, FullDuplexMode, Async>,
-        AnyOutput<'static>,
+        SpiDmaBus<'static, Async>,
+        Output<'static, AnyPin>,
     >,
-    lora_irq: AnyInput<'static>,
-    lora_rst: AnyOutput<'static>,
+    lora_irq: Input<'static, AnyPin>,
+    lora_rst: Output<'static, AnyPin>,
 ) -> ! {
     // We're using an SX1278, but the SX1276 variant seems to work
     let config = sx127x::Config {
