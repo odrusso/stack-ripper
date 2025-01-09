@@ -23,6 +23,9 @@ esp-backtrace       = { version = "0.14.1", features = ["esp32c3", "exception-ha
 esp-hal             = { version = "0.22.0", features = ["esp32c3", "defmt"] }
 esp-hal-embassy     = { version = "0.5.0", features = ["esp32c3", "defmt", "integrated-timers"]}
 esp-println         = { version = "0.11.0", features = ["esp32c3", "defmt-espflash"] }
+esp-wifi            = { version = "0.11.0", features = ["esp32c3", "ble"] }
+esp-alloc           = "0.5.0"
+bleps               = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5148d8ae679e021b78f53fd33afb8bb35d0b62e", features = [ "macros", "async"] }
 defmt               = "0.3.6"
 
 nmea0183            = "0.4.0"
@@ -38,7 +41,7 @@ postcard            = "1.0.8"
 static_cell         = "2.1.0"
 bno055              = { git = "https://github.com/odrusso/bno055", version = "0.4.0"}
 
-[profile.release]  
+[profile.release]
 codegen-units    = 1
 debug            = 0
 debug-assertions = false
