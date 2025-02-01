@@ -6,8 +6,8 @@ use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
 use embassy_executor::Spawner;
 
 use esp_hal::{
-    gpio::{Input, Level, Output, Pull},
-    peripherals::Peripherals,
+    gpio::{AnyPin, Input, Level, Output, Pull},
+    peripherals::{Peripherals, DMA, SPI2, TIMG0, UART0},
     prelude::*,
     timer::timg::TimerGroup,
     uart::{Config, Uart},
@@ -18,23 +18,61 @@ use esp_backtrace as _;
 
 use stack_ripper::{gps, lora, spi};
 
+struct TxPins {
+    uart_rx: AnyPin,
+    uart_tx: AnyPin,
+    
+    lora_rst: AnyPin,
+    lora_irq: AnyPin,
+
+    lora_nss: AnyPin,
+    lora_mosi: AnyPin,
+    lora_miso: AnyPin,
+    lora_clk: AnyPin,
+
+    timg: TIMG0,
+    uart: UART0,
+    dma: DMA,
+    spi: SPI2,
+}
+
+fn get_tx_pins_v003(p: Peripherals) -> TxPins {
+    TxPins {
+        uart_rx: p.GPIO4.degrade(),
+        uart_tx: p.GPIO5.degrade(),
+
+        lora_rst: p.GPIO6.degrade(),
+        lora_irq: p.GPIO7.degrade(),
+
+        lora_nss: p.GPIO8.degrade(),
+        lora_clk: p.GPIO21.degrade(),
+        lora_miso: p.GPIO20.degrade(),
+        lora_mosi: p.GPIO10.degrade(),
+
+        timg: p.TIMG0,
+        uart: p.UART0,
+        dma: p.DMA,
+        spi: p.SPI2,
+    }
+}
+
 #[main]
 async fn main(_spawner: Spawner) -> () {
     info!("Initializing");
 
     let peripherals: Peripherals = esp_hal::init(esp_hal::Config::default());
-    let timg0 = TimerGroup::new(peripherals.TIMG0);
+
+    let pins = get_tx_pins_v003(peripherals);
+
+    let timg0 = TimerGroup::new(pins.timg);
 
     esp_hal_embassy::init(timg0.timer0);
 
     info!("Initializing compete");
 
     // Setup UART for GPS
-    let rx_pin = peripherals.GPIO8.degrade();
-    let tx_pin = peripherals.GPIO7.degrade();
-
     let uart_config = Config::default().baudrate(9600);
-    let uart = Uart::new_with_config(peripherals.UART0, uart_config, rx_pin, tx_pin)
+    let uart = Uart::new_with_config(pins.uart, uart_config, pins.uart_rx, pins.uart_tx)
         .unwrap()
         .into_async();
 
@@ -45,23 +83,20 @@ async fn main(_spawner: Spawner) -> () {
     _spawner.spawn(gps::sample_uart(rx)).unwrap();
 
     // Setup SPI bus
-    let spi_clock = peripherals.GPIO20.degrade();
-    let spi_miso = peripherals.GPIO21.degrade();
-    let spi_mosi = peripherals.GPIO1.degrade();
 
     let spi_bus = spi::init(
-        peripherals.DMA,
-        peripherals.SPI2,
-        spi_clock,
-        spi_mosi,
-        spi_miso,
+        pins.dma,
+        pins.spi,
+        pins.lora_clk,
+        pins.lora_mosi,
+        pins.lora_miso,
     );
 
-    let lora_spi_csb = Output::new(peripherals.GPIO0.degrade(), Level::High);
+    let lora_spi_csb = Output::new(pins.lora_nss, Level::High);
     let lora_spi = SpiDevice::new(spi_bus, lora_spi_csb);
 
-    let lora_rst = Output::new(peripherals.GPIO10.degrade(), Level::High);
-    let lora_irq = Input::new(peripherals.GPIO2.degrade(), Pull::Up);
+    let lora_rst = Output::new(pins.lora_rst, Level::High);
+    let lora_irq = Input::new(pins.lora_irq, Pull::Up);
 
     _spawner
         .spawn(lora::transmit(lora_spi, lora_irq, lora_rst))
