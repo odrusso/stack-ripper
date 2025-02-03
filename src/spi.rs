@@ -31,7 +31,7 @@ pub fn init(
     let dma_tx_buf = DmaTxBuf::new(tx_descriptors, tx_buffer).unwrap();
 
     let spi_config = Config {
-        frequency: 200.kHz(),
+        frequency: 40.kHz(),
         mode: SpiMode::Mode0,
         ..Config::default()
     };

@@ -6,8 +6,8 @@ use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
 use embassy_executor::Spawner;
 
 use esp_hal::{
-    gpio::{AnyPin, Input, Level, Output, Pull},
-    peripherals::{Peripherals, DMA, SPI2, TIMG0, UART0},
+    gpio::{Input, Level, Output, Pull},
+    peripherals::Peripherals,
     prelude::*,
     timer::timg::TimerGroup,
     uart::{Config, Uart},
@@ -16,45 +16,7 @@ use esp_hal::{
 use defmt::info;
 use esp_backtrace as _;
 
-use stack_ripper::{gps, lora, spi};
-
-struct TxPins {
-    uart_rx: AnyPin,
-    uart_tx: AnyPin,
-    
-    lora_rst: AnyPin,
-    lora_irq: AnyPin,
-
-    lora_nss: AnyPin,
-    lora_mosi: AnyPin,
-    lora_miso: AnyPin,
-    lora_clk: AnyPin,
-
-    timg: TIMG0,
-    uart: UART0,
-    dma: DMA,
-    spi: SPI2,
-}
-
-fn get_tx_pins_v003(p: Peripherals) -> TxPins {
-    TxPins {
-        uart_rx: p.GPIO4.degrade(),
-        uart_tx: p.GPIO5.degrade(),
-
-        lora_rst: p.GPIO6.degrade(),
-        lora_irq: p.GPIO7.degrade(),
-
-        lora_nss: p.GPIO8.degrade(),
-        lora_clk: p.GPIO21.degrade(),
-        lora_miso: p.GPIO20.degrade(),
-        lora_mosi: p.GPIO10.degrade(),
-
-        timg: p.TIMG0,
-        uart: p.UART0,
-        dma: p.DMA,
-        spi: p.SPI2,
-    }
-}
+use stack_ripper::{gps, lora, pins, spi};
 
 #[main]
 async fn main(_spawner: Spawner) -> () {
@@ -62,7 +24,8 @@ async fn main(_spawner: Spawner) -> () {
 
     let peripherals: Peripherals = esp_hal::init(esp_hal::Config::default());
 
-    let pins = get_tx_pins_v003(peripherals);
+    // let pins = pins::get_tx_pins_v004_bread(peripherals);
+    let pins = pins::get_tx_pins_v003(peripherals);
 
     let timg0 = TimerGroup::new(pins.timg);
 
@@ -83,7 +46,6 @@ async fn main(_spawner: Spawner) -> () {
     _spawner.spawn(gps::sample_uart(rx)).unwrap();
 
     // Setup SPI bus
-
     let spi_bus = spi::init(
         pins.dma,
         pins.spi,
@@ -96,7 +58,7 @@ async fn main(_spawner: Spawner) -> () {
     let lora_spi = SpiDevice::new(spi_bus, lora_spi_csb);
 
     let lora_rst = Output::new(pins.lora_rst, Level::High);
-    let lora_irq = Input::new(pins.lora_irq, Pull::Up);
+    let lora_irq = Input::new(pins.lora_irq, Pull::Down);
 
     _spawner
         .spawn(lora::transmit(lora_spi, lora_irq, lora_rst))

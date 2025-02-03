@@ -8,43 +8,12 @@ use embassy_executor::Spawner;
 use embassy_time::Timer;
 use esp_backtrace as _;
 use esp_hal::{
-    gpio::{AnyPin, Input, Level, Output, Pin, Pull},
-    peripherals::{Peripherals, DMA, SPI2, TIMG0},
+    gpio::{Input, Level, Output, Pull},
+    peripherals::Peripherals,
     timer::timg::TimerGroup,
 };
 
-use stack_ripper::{lora, spi, state};
-
-struct RxPins {
-    
-    lora_rst: AnyPin,
-    lora_irq: AnyPin,
-
-    lora_nss: AnyPin,
-    lora_mosi: AnyPin,
-    lora_miso: AnyPin,
-    lora_clk: AnyPin,
-
-    timg: TIMG0,
-    dma: DMA,
-    spi: SPI2,
-}
-
-fn get_rx_pins_v001(p: Peripherals) -> RxPins {
-    RxPins {
-        lora_rst: p.GPIO6.degrade(),
-        lora_irq: p.GPIO5.degrade(),
-
-        lora_nss: p.GPIO1.degrade(),
-        lora_clk: p.GPIO4.degrade(),
-        lora_miso: p.GPIO3.degrade(),
-        lora_mosi: p.GPIO2.degrade(),
-
-        timg: p.TIMG0,
-        dma: p.DMA,
-        spi: p.SPI2,
-    }
-}
+use stack_ripper::{lora, pins, spi, state};
 
 #[embassy_executor::task]
 async fn print_state() -> ! {
@@ -60,7 +29,8 @@ async fn main(spawner: Spawner) {
 
     let peripherals: Peripherals = esp_hal::init(esp_hal::Config::default());
 
-    let pins = get_rx_pins_v001(peripherals);
+    // let pins = pins::get_rx_pins_v001(peripherals);
+    let pins = pins::get_tx_pins_v004_bread(peripherals);
 
     let timg0 = TimerGroup::new(pins.timg);
 
@@ -82,7 +52,7 @@ async fn main(spawner: Spawner) {
     let lora_spi = SpiDevice::new(spi_bus, lora_spi_csb);
 
     let lora_rst = Output::new(pins.lora_rst, Level::High);
-    let lora_irq = Input::new(pins.lora_irq.degrade(), Pull::Up);
+    let lora_irq = Input::new(pins.lora_irq, Pull::None);
 
     spawner
         .spawn(lora::receive(lora_spi, lora_irq, lora_rst))
