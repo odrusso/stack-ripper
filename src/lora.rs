@@ -98,7 +98,10 @@ pub async fn receive(
                 info!("RX successful, with {} bytes", received_len);
                 // Deserialize and print
                 let out: State = from_bytes(&rx_buff).unwrap();
-                info!("Received state: {:?}, RSSI: {}, SNR: {}", out, _rx_pkt_status.rssi, _rx_pkt_status.snr);
+                info!(
+                    "Received state: {:?}, RSSI: {}, SNR: {}",
+                    out, _rx_pkt_status.rssi, _rx_pkt_status.snr
+                );
             }
             Ok(Err(_)) => {
                 error!("RX failed");
