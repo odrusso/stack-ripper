@@ -96,14 +96,9 @@ pub async fn receive(
         match rx_timeout_result.await {
             Ok(Ok((received_len, _rx_pkt_status))) => {
                 info!("RX successful, with {} bytes", received_len);
-                info!(
-                    "Packet info: RSSI:{} SNR:{}",
-                    _rx_pkt_status.rssi, _rx_pkt_status.snr
-                );
-
                 // Deserialize and print
                 let out: State = from_bytes(&rx_buff).unwrap();
-                info!("Received state: {:?}", out);
+                info!("Received state: {:?}, RSSI: {}, SNR: {}", out, _rx_pkt_status.rssi, _rx_pkt_status.snr);
             }
             Ok(Err(_)) => {
                 error!("RX failed");
